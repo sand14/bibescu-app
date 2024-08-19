@@ -107,13 +107,15 @@ export default function GoogleMaps() {
 
                         // Add dragend listener
                         google.maps.event.addListener(markerInstance, 'dragend', (e: google.maps.MapMouseEvent) => {
-                            const latLng = e.latLng;
-                            const updatedMarkers = prevMarkers.map(marker =>
-                                marker.lat === newMarker.lat && marker.lng === newMarker.lng
-                                    ? { ...marker, lat: latLng.lat(), lng: latLng.lng() }
-                                    : marker
-                            );
-                            setMarkers(updatedMarkers);
+                            if (e.latLng) { // Ensure latLng is not null
+                                const latLng = e.latLng;
+                                const updatedMarkers = prevMarkers.map(marker =>
+                                    marker.lat === newMarker.lat && marker.lng === newMarker.lng
+                                        ? { ...marker, lat: latLng.lat(), lng: latLng.lng() }
+                                        : marker
+                                );
+                                setMarkers(updatedMarkers);
+                            }
                         });
 
                         return updatedMarkers;
@@ -171,13 +173,15 @@ export default function GoogleMaps() {
 
                 // Add dragend listener
                 google.maps.event.addListener(markerInstance, 'dragend', (e: google.maps.MapMouseEvent) => {
-                    const latLng = e.latLng;
-                    const updatedMarkers = markers.map(m =>
-                        m.lat === marker.lat && m.lng === marker.lng
-                            ? { ...m, lat: latLng.lat(), lng: latLng.lng() }
-                            : m
-                    );
-                    setMarkers(updatedMarkers);
+                    if (e.latLng) { // Ensure latLng is not null
+                        const latLng = e.latLng;
+                        const updatedMarkers = markers.map(m =>
+                            m.lat === marker.lat && m.lng === marker.lng
+                                ? { ...m, lat: latLng.lat(), lng: latLng.lng() }
+                                : m
+                        );
+                        setMarkers(updatedMarkers);
+                    }
                 });
             });
 
