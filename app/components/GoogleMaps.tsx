@@ -7,12 +7,34 @@ const calculateDistance = (coord1: google.maps.LatLng, coord2: google.maps.LatLn
     return google.maps.geometry.spherical.computeDistanceBetween(coord1, coord2);
 };
 
+// Helper function to calculate time in minutes and seconds
+const calculateTime = (distance: number, speed: number) => {
+    const timeInHours = distance / 1000 / speed; // distance in km, speed in km/h
+    const totalSeconds = timeInHours * 3600; // Convert hours to seconds
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    return { minutes, seconds };
+};
+
+// Helper function to calculate total time in h:mm:ss format
+const calculateTotalTime = (distances: number[], speed: number) => {
+    let totalSeconds = distances.reduce((acc, distance) => acc + (distance / (speed * 1000 / 3600)), 0);
+
+    const hours = Math.floor(totalSeconds / 3600);
+    totalSeconds %= 3600;
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+
+    return { hours, minutes, seconds };
+};
+
 export default function GoogleMaps() {
     const mapRef = useRef<HTMLDivElement>(null);
     const [markers, setMarkers] = useState<Array<{ lat: number, lng: number, name: string }>>([]);
     const [map, setMap] = useState<google.maps.Map | null>(null);
     const [distance, setDistance] = useState<number | null>(null);
     const [distances, setDistances] = useState<number[]>([]);
+    const [speed, setSpeed] = useState<number>(130); // Default speed in km/h
     const polylineRef = useRef<google.maps.Polyline | null>(null);
     const polygonRef = useRef<google.maps.Polygon | null>(null);
     const markersRef = useRef<google.maps.Marker[]>([]);
@@ -206,7 +228,7 @@ export default function GoogleMaps() {
                     const closingDistance = calculateDistance(lastCoord, firstCoord);
                     totalDistance += closingDistance;
                     newDistances.push(closingDistance);
-                    
+
                     // Update path to close the loop
                     path.push(firstCoord);
                 }
@@ -235,7 +257,7 @@ export default function GoogleMaps() {
                 }
             }
         }
-    }, [markers, map]);
+    }, [markers, map, speed]);
 
     return (
         <div>
@@ -247,6 +269,21 @@ export default function GoogleMaps() {
                 >
                     Clear All Markers
                 </button>
+
+                <div className="mt-4">
+                    <label htmlFor="speed" className="block text-sm font-medium text-gray-700">Select Speed (km/h): {speed} km/h</label>
+                    <input
+                        id="speed"
+                        type="range"
+                        min="100"
+                        step="10"
+                        max="180"
+                        value={speed}
+                        onChange={(e) => setSpeed(parseInt(e.target.value))}
+                        className="w-full mt-2"
+                    />
+                </div>
+
                 <h3 className="mt-4">Markers Coordinates:</h3>
                 <ul>
                     {markers.map((marker, index) => (
@@ -257,31 +294,45 @@ export default function GoogleMaps() {
                 </ul>
                 {distance !== null && (
                     <div>
-                        <h3>Total Distance Between Markers:</h3>
-                        <p>{(distance / 1000).toFixed(2)} km</p> {/* Distance in kilometers */}
+                        <h3>Total Distance: {(distance / 1000).toFixed(2)} km</h3>
+
+                        {/* Calculate and display total travel time */}
+                        {(() => {
+                            const { hours, minutes, seconds } = calculateTotalTime(distances, speed);
+                            return (
+                                <p>
+                                    Total Time: {`${hours}:${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`}
+                                </p>
+                            );
+                        })()}
                     </div>
                 )}
                 {distances.length > 0 && (
                     <div className="mt-4">
-                        <h3>Distance Between Markers:</h3>
+                        <h3>Distance and Time Between Markers:</h3>
                         <table className="border-collapse border border-gray-200 w-full">
                             <thead>
                                 <tr>
                                     <th className="border border-gray-300 p-2">From Marker</th>
                                     <th className="border border-gray-300 p-2">To Marker</th>
                                     <th className="border border-gray-300 p-2">Distance (km)</th>
+                                    <th className="border border-gray-300 p-2">Time (min:sec)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {distances.map((dist, index) => (
-                                    <tr key={index}>
-                                        <td className="border border-gray-300 p-2">{index + 1}</td>
-                                        <td className="border border-gray-300 p-2">
-                                            {index + 2 > markers.length ? 1 : index + 2}
-                                        </td>
-                                        <td className="border border-gray-300 p-2">{(dist / 1000).toFixed(2)}</td> {/* Distance in kilometers */}
-                                    </tr>
-                                ))}
+                                {distances.map((dist, index) => {
+                                    const { minutes, seconds } = calculateTime(dist, speed);
+                                    return (
+                                        <tr key={index}>
+                                            <td className="border border-gray-300 p-2">{index + 1}</td>
+                                            <td className="border border-gray-300 p-2">
+                                                {index + 2 > markers.length ? 1 : index + 2}
+                                            </td>
+                                            <td className="border border-gray-300 p-2">{(dist / 1000).toFixed(2)}</td> {/* Distance in kilometers */}
+                                            <td className="border border-gray-300 p-2">{`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`}</td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
