@@ -4,10 +4,10 @@ import { Analytics } from "@vercel/analytics/react"
 
 export default function Home() {
   return (
-    <body>
+    <>
       <GoogleMaps/>
       <SpeedInsights/>
       <Analytics/>
-    </body>
+    </>
   );
 }
