@@ -10,10 +10,9 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
       - name: build image
-        run: docker build .
+        run: docker build . -t ghcr.io/sand14/bibescu-app:latest
       - name: push image to ghcr
         run: |
           docker login ghcr.io -u sand14 -p ${{ secrets.GH_PAT }}
-          docker tag bibescu-app ghcr.io/sand14/bibescu-app:latest
           docker push ghcr.io/sand14/bibescu-app:latest 
       
