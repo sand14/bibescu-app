@@ -1,0 +1,18 @@
+name: Docker Image CI for GHCR
+
+on:
+  push
+
+jobs:
+  publish_image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: build image
+        run: docker build .
+      - name: push image to ghcr
+        run: |
+          docker login -u sand14 -p ${{ secrets.GH_PAT }}
+          docker push sand14/bibescu-app:latest 
+      
