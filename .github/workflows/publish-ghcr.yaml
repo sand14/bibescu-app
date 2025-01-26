@@ -14,5 +14,5 @@ jobs:
       - name: push image to ghcr
         run: |
           docker login ghcr.io -u sand14 -p ${{ secrets.GH_PAT }}
-          docker push sand14/bibescu-app:latest 
+          docker push ghcr.io/sand14/bibescu-app:latest 
       
