@@ -169,35 +169,27 @@ export default function GoogleMaps() {
         // First page with 4 markers
         // Create a 2x2 grid of images
         const positions = [
-            { x: 20, y: 40 },   // Top-left
-            { x: 115, y: 40 },  // Top-right
-            { x: 20, y: 110 },  // Bottom-left
-            { x: 115, y: 110 }, // Bottom-right
+            { x: 20, y: 40 },   // Row 1
+            { x: 115, y: 40 },  // Row 1
+            { x: 20, y: 110 },  // Row 2
+            { x: 115, y: 110 }, // Row 2
+            { x: 20, y: 180 },  // Row 3
+            { x: 115, y: 180 }, // Row 3
         ];
 
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 6; i++) {
             const marker = markers[i];
             const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker.lat},${marker.lng}&zoom=20&size=600x400&maptype=satellite&markers=color:red%7Clabel:${i + 1}%7C${marker.lat},${marker.lng}&key=${apiKey}`;
             const imgData = await fetchImageAsDataURL(staticMapUrl);
             doc.addImage(imgData, 'JPEG', positions[i].x, positions[i].y, 85, 60);
         }
 
-        // Second page with 2 markers and table
+        // Second page with table
         doc.addPage();
         doc.setFontSize(18);
 
-        // Add last 2 markers
-        for (let i = 4; i < 6; i++) {
-            const marker = markers[i];
-            const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker.lat},${marker.lng}&zoom=20&size=600x400&maptype=satellite&markers=color:red%7Clabel:${i + 1}%7C${marker.lat},${marker.lng}&key=${apiKey}`;
-            const imgData = await fetchImageAsDataURL(staticMapUrl);
-            const xPosition = i === 4 ? 20 : 115;
-            doc.addImage(imgData, 'JPEG', xPosition, 40, 85, 60);
-        }
-
         // Add table below the images on second page
         autoTable(doc, {
-            startY: 110,
             head: [['From', 'To', 'Distance (km)', 'Time (min:sec)']],
             body: distances.map((dist, index) => {
                 const { minutes, seconds } = calculateTime(dist, speed);
@@ -347,7 +339,7 @@ export default function GoogleMaps() {
                 </button>
                 <button
                     onClick={handleGeneratePDF}
-                    className="px-4 py-2 bg-blue-500 text-white rounded ml-2"
+                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded ml-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
                     disabled={markers.length !== 6 || !apiKey}
                 >
                     Generate PDF Report
@@ -376,7 +368,6 @@ export default function GoogleMaps() {
                 {distance !== null && (
                     <div>
                         <h3>Total Distance: {(distance / 1000).toFixed(2)} km</h3>
-
                         {/* Calculate and display total travel time */}
                         {(() => {
                             const { hours, minutes, seconds } = calculateTotalTime(distances, speed);
@@ -409,7 +400,7 @@ export default function GoogleMaps() {
                                             <td className="border border-gray-300 p-2">
                                                 {index + 2 > markers.length ? 1 : index + 2}
                                             </td>
-                                            <td className="border border-gray-300 p-2">{(dist / 1000).toFixed(2)}</td> {/* Distance in kilometers */}
+                                            <td className="border border-gray-300 p-2">{(dist / 1000).toFixed(2)}</td>
                                             <td className="border border-gray-300 p-2">{`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`}</td>
                                         </tr>
                                     );
