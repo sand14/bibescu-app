@@ -62,7 +62,6 @@ export default function GoogleMaps() {
         const initializeMap = async () => {
             const response = await fetch("/api/config");
             const { googleMapsApiKey } = await response.json();
-
             const loader = new Loader({
                 apiKey: googleMapsApiKey,
                 version: 'quarterly',
