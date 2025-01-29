@@ -60,8 +60,11 @@ export default function GoogleMaps() {
     // Initialize the map only once
     useEffect(() => {
         const initializeMap = async () => {
+            const response = await fetch("/api/config");
+            const { googleMapsApiKey } = await response.json();
+
             const loader = new Loader({
-                apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string,
+                apiKey: googleMapsApiKey,
                 version: 'quarterly',
                 libraries: ['geometry'] // Required for distance calculations
             });
