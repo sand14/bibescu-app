@@ -11,6 +11,8 @@
   "dependencies": {
     "@googlemaps/js-api-loader": "^1.16.8",
     "@types/google.maps": "^3.55.12",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
     "next": "^15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

@@ -1,6 +1,8 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // Helper function to calculate distance between two coordinates
 const calculateDistance = (coord1: google.maps.LatLng, coord2: google.maps.LatLng) => {
@@ -57,11 +59,14 @@ export default function GoogleMaps() {
         { lat: 46.024722, lng: 25.732500 }, // Closing the polygon
     ];
 
+    const [apiKey, setApiKey] = useState<string>('');
+
     // Initialize the map only once
     useEffect(() => {
         const initializeMap = async () => {
             const response = await fetch("/api/config");
             const { googleMapsApiKey } = await response.json();
+            setApiKey(googleMapsApiKey);
             const loader = new Loader({
                 apiKey: googleMapsApiKey,
                 version: 'quarterly',
@@ -153,6 +158,75 @@ export default function GoogleMaps() {
 
         initializeMap();
     }, []);
+
+    const handleGeneratePDF = async () => {
+        if (markers.length !== 6 || !apiKey) return;
+
+        const doc = new jsPDF('portrait', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        // First page with 4 markers
+        // Create a 2x2 grid of images
+        const positions = [
+            { x: 20, y: 40 },   // Top-left
+            { x: 115, y: 40 },  // Top-right
+            { x: 20, y: 110 },  // Bottom-left
+            { x: 115, y: 110 }, // Bottom-right
+        ];
+
+        for (let i = 0; i < 4; i++) {
+            const marker = markers[i];
+            const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker.lat},${marker.lng}&zoom=20&size=600x400&maptype=satellite&markers=color:red%7Clabel:${i + 1}%7C${marker.lat},${marker.lng}&key=${apiKey}`;
+            const imgData = await fetchImageAsDataURL(staticMapUrl);
+            doc.addImage(imgData, 'JPEG', positions[i].x, positions[i].y, 85, 60);
+        }
+
+        // Second page with 2 markers and table
+        doc.addPage();
+        doc.setFontSize(18);
+
+        // Add last 2 markers
+        for (let i = 4; i < 6; i++) {
+            const marker = markers[i];
+            const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker.lat},${marker.lng}&zoom=20&size=600x400&maptype=satellite&markers=color:red%7Clabel:${i + 1}%7C${marker.lat},${marker.lng}&key=${apiKey}`;
+            const imgData = await fetchImageAsDataURL(staticMapUrl);
+            const xPosition = i === 4 ? 20 : 115;
+            doc.addImage(imgData, 'JPEG', xPosition, 40, 85, 60);
+        }
+
+        // Add table below the images on second page
+        autoTable(doc, {
+            startY: 110,
+            head: [['From', 'To', 'Distance (km)', 'Time (min:sec)']],
+            body: distances.map((dist, index) => {
+                const { minutes, seconds } = calculateTime(dist, speed);
+                return [
+                    index + 1,
+                    index + 2 > markers.length ? 1 : index + 2,
+                    (dist / 1000).toFixed(2),
+                    `${minutes}:${seconds.toString().padStart(2, '0')}`
+                ];
+            }),
+            theme: 'grid',
+            styles: { cellPadding: 5, fontSize: 12 },
+            margin: { horizontal: 20 }
+        });
+
+        doc.save('journey-report.pdf');
+    };
+
+    // Add this helper function
+    const fetchImageAsDataURL = async (url: string): Promise<string> => {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    };
 
     // Function to clear all markers
     const clearMarkers = () => {
@@ -271,7 +345,13 @@ export default function GoogleMaps() {
                 >
                     Clear All Markers
                 </button>
-
+                <button
+                    onClick={handleGeneratePDF}
+                    className="px-4 py-2 bg-blue-500 text-white rounded ml-2"
+                    disabled={markers.length !== 6 || !apiKey}
+                >
+                    Generate PDF Report
+                </button>
                 <div className="mt-4">
                     <label htmlFor="speed" className="block text-sm font-medium text-gray-700">Select Speed (km/h): {speed} km/h</label>
                     <input
@@ -285,7 +365,6 @@ export default function GoogleMaps() {
                         className="w-full mt-2"
                     />
                 </div>
-
                 <h3 className="mt-4">Markers Coordinates:</h3>
                 <ul>
                     {markers.map((marker, index) => (
