@@ -9,3 +9,11 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    ignore:
+      - dependency-name: '*'
+        update-types: ["version-update:semver-minor"]
+    commit-message:
+      prefix: 'chore'
+      include: 'scope'
+    assignees:
+      - 'sand14'
