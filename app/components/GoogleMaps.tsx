@@ -205,6 +205,16 @@ export default function GoogleMaps() {
             margin: { horizontal: 20 }
         });
 
+        // Add marker coordinates below the table
+        let finalY = (doc as any).lastAutoTable.finalY || 40;
+        doc.setFontSize(14);
+        doc.text('Markers Coordinates:', 20, finalY + 15);
+        doc.setFontSize(12);
+        markers.forEach((marker, idx) => {
+            doc.text(`${marker.name}: Lat: ${marker.lat.toFixed(6)}, Lng: ${marker.lng.toFixed(6)}`,
+                20, finalY + 25 + idx * 8);
+        });
+
         doc.save('journey-report.pdf');
     };
 
