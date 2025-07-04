@@ -1,5 +1,8 @@
 
 # Bibescu-App
+[![Docker Pulls](https://badgen.net/docker/pulls/sand14/bibescu-app?icon=docker&label=pulls)](https://hub.docker.com/r/sand14/bibescu-app)
+![GitHub Release](https://img.shields.io/github/v/release/sand14/bibescu-app)
+
 
 A NextJS application that is Useful for trajectory/time calculation for a Romanian Aviation contest.
 
