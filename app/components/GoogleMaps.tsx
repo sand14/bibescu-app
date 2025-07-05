@@ -199,7 +199,7 @@ export default function GoogleMaps() {
 
         for (let i = 0; i < 6; i++) {
             const marker = markers[i];
-            const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker.lat},${marker.lng}&zoom=18&size=600x400&maptype=satellite&markers=color:red%7Clabel:${i + 1}%7C${marker.lat},${marker.lng}&key=${apiKey}`;
+            const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker.lat},${marker.lng}&zoom=17&size=600x400&maptype=satellite&markers=color:red%7Clabel:${i + 1}%7C${marker.lat},${marker.lng}&key=${apiKey}`;
             const imgData = await fetchImageAsDataURL(staticMapUrl);
             doc.addImage(imgData, 'JPEG', positions[i].x, positions[i].y, 85, 60);
         }
@@ -368,11 +368,11 @@ export default function GoogleMaps() {
 
     return (
         <div>
-            <div className="h-[600px]" ref={mapRef} />
+            <div className="h-[500px]" ref={mapRef} />
             <div className="mt-4">
                 <button
                     onClick={clearMarkers}
-                    className="px-4 py-2 bg-red-500 text-white rounded"
+                    className="px-4 py-2 bg-red-500 hover:bg-red-800 text-white rounded ml-2 transition-colors"
                 >
                     Clear All Markers
                 </button>
