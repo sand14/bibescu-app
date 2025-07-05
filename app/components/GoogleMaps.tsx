@@ -187,21 +187,24 @@ export default function GoogleMaps() {
         const pageHeight = doc.internal.pageSize.getHeight();
 
         // First page with 4 markers
-        // Create a 2x2 grid of images
+        // Create a 2x2 grid of images (bigger images, adjusted positions)
+        const imageWidth = 100;
+        const imageHeight = 75;
         const positions = [
-            { x: 20, y: 40 },   // Row 1
-            { x: 115, y: 40 },  // Row 1
-            { x: 20, y: 110 },  // Row 2
-            { x: 115, y: 110 }, // Row 2
-            { x: 20, y: 180 },  // Row 3
-            { x: 115, y: 180 }, // Row 3
+            { x: 15, y: 30 },   // Row 1, Col 1
+            { x: 120, y: 30 },  // Row 1, Col 2
+            { x: 15, y: 115 },  // Row 2, Col 1
+            { x: 120, y: 115 }, // Row 2, Col 2
+            { x: 15, y: 200 },  // Row 3, Col 1
+            { x: 120, y: 200 }, // Row 3, Col 2
         ];
 
         for (let i = 0; i < 6; i++) {
             const marker = markers[i];
-            const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker.lat},${marker.lng}&zoom=16&size=600x400&maptype=hybrid&markers=color:red%7Clabel:${i + 1}%7C${marker.lat},${marker.lng}&key=${apiKey}`;
+            // Use a higher resolution for the static map image to match the PDF size (100x75mm ~ 378x284px, but use 800x600 for better quality)
+            const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker.lat},${marker.lng}&zoom=18&size=800x600&maptype=hybrid&markers=color:red%7Clabel:${i + 1}%7C${marker.lat},${marker.lng}&key=${apiKey}`;
             const imgData = await fetchImageAsDataURL(staticMapUrl);
-            doc.addImage(imgData, 'JPEG', positions[i].x, positions[i].y, 85, 60);
+            doc.addImage(imgData, 'JPEG', positions[i].x, positions[i].y, imageWidth, imageHeight);
         }
 
         // Second page with table
