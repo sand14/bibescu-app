@@ -187,16 +187,16 @@ export default function GoogleMaps() {
         const pageHeight = doc.internal.pageSize.getHeight();
 
         // First page with 6 markers
-        // Adjusted image size and positions for perfect grid alignment on A4
+        // Add a 5mm gap between columns and rows for better separation
         const imageWidth = 90;
         const imageHeight = 67.5; // keep 4:3 aspect ratio
         const positions = [
-            { x: 15, y: 30 },    // Row 1, Col 1
-            { x: 105, y: 30 },   // Row 1, Col 2
-            { x: 15, y: 107 },   // Row 2, Col 1
-            { x: 105, y: 107 },  // Row 2, Col 2
-            { x: 15, y: 184 },   // Row 3, Col 1
-            { x: 105, y: 184 },  // Row 3, Col 2
+            { x: 15, y: 30 },     // Row 1, Col 1
+            { x: 110, y: 30 },    // Row 1, Col 2 (15 + 90 + 5)
+            { x: 15, y: 102.5 },  // Row 2, Col 1 (30 + 67.5 + 5)
+            { x: 110, y: 102.5 }, // Row 2, Col 2
+            { x: 15, y: 175 },    // Row 3, Col 1 (102.5 + 67.5 + 5)
+            { x: 110, y: 175 },   // Row 3, Col 2
         ];
 
         for (let i = 0; i < 6; i++) {
