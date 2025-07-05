@@ -199,7 +199,7 @@ export default function GoogleMaps() {
 
         for (let i = 0; i < 6; i++) {
             const marker = markers[i];
-            const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker.lat},${marker.lng}&zoom=16&size=600x400&maptype=satellite&markers=color:red%7Clabel:${i + 1}%7C${marker.lat},${marker.lng}&key=${apiKey}`;
+            const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker.lat},${marker.lng}&zoom=16&size=600x400&maptype=hybrid&markers=color:red%7Clabel:${i + 1}%7C${marker.lat},${marker.lng}&key=${apiKey}`;
             const imgData = await fetchImageAsDataURL(staticMapUrl);
             doc.addImage(imgData, 'JPEG', positions[i].x, positions[i].y, 85, 60);
         }
