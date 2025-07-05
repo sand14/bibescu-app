@@ -207,10 +207,13 @@ export default function GoogleMaps() {
         // Second page with table
         doc.addPage();
         doc.setFontSize(18);
-        // Add speed before the table
-        doc.text(`Speed: ${speed} km/h`, 20, 30);
         // Calculate cumulative times for PDF
         const cumulativeTimes = calculateCumulativeTimes(distances, speed);
+
+        // Determine where to start the table
+        let tableStartY = 40;
+        // Add speed just above the table
+        doc.text(`Speed: ${speed} km/h`, 20, tableStartY - 10);
 
         // Add table below the images on second page
         autoTable(doc, {
@@ -227,7 +230,8 @@ export default function GoogleMaps() {
             }),
             theme: 'grid',
             styles: { cellPadding: 5, fontSize: 12 },
-            margin: { horizontal: 20 }
+            margin: { horizontal: 20 },
+            startY: tableStartY
         });
 
         // Add marker coordinates below the table
