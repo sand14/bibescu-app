@@ -56,7 +56,7 @@ export default function GoogleMaps() {
     const [map, setMap] = useState<google.maps.Map | null>(null);
     const [distance, setDistance] = useState<number | null>(null);
     const [distances, setDistances] = useState<number[]>([]);
-    const [speed, setSpeed] = useState<number>(130); // Default speed in km/h
+    const [speed, setSpeed] = useState<number>(120); // Default speed in km/h
     const polylineRef = useRef<google.maps.Polyline | null>(null);
     const polygonRef = useRef<google.maps.Polygon | null>(null);
     const markersRef = useRef<google.maps.Marker[]>([]);
@@ -207,7 +207,8 @@ export default function GoogleMaps() {
         // Second page with table
         doc.addPage();
         doc.setFontSize(18);
-
+        // Add speed before the table
+        doc.text(`Speed: ${speed} km/h`, 20, 30);
         // Calculate cumulative times for PDF
         const cumulativeTimes = calculateCumulativeTimes(distances, speed);
 
