@@ -30,13 +30,33 @@ const calculateTotalTime = (distances: number[], speed: number) => {
     return { hours, minutes, seconds };
 };
 
+// Helper function to format seconds into hh:mm:ss format
+const formatTimeHMS = (totalSeconds: number) => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+};
+
+// Helper function to calculate cumulative times
+const calculateCumulativeTimes = (distances: number[], speed: number) => {
+    let cumulativeSeconds = 0;
+    return distances.map(distance => {
+        const timeInHours = distance / 1000 / speed;
+        const segmentSeconds = timeInHours * 3600;
+        cumulativeSeconds += segmentSeconds;
+        return cumulativeSeconds;
+    });
+};
+
 export default function GoogleMaps() {
     const mapRef = useRef<HTMLDivElement>(null);
     const [markers, setMarkers] = useState<Array<{ lat: number, lng: number, name: string }>>([]);
     const [map, setMap] = useState<google.maps.Map | null>(null);
     const [distance, setDistance] = useState<number | null>(null);
     const [distances, setDistances] = useState<number[]>([]);
-    const [speed, setSpeed] = useState<number>(130); // Default speed in km/h
+    const [speed, setSpeed] = useState<number>(120); // Default speed in km/h
     const polylineRef = useRef<google.maps.Polyline | null>(null);
     const polygonRef = useRef<google.maps.Polygon | null>(null);
     const markersRef = useRef<google.maps.Marker[]>([]);
@@ -166,43 +186,54 @@ export default function GoogleMaps() {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
-        // First page with 4 markers
-        // Create a 2x2 grid of images
+        // First page with 6 markers
+        // Add a 5mm gap between columns and rows for better separation
+        const imageWidth = 90;
+        const imageHeight = 67.5; // keep 4:3 aspect ratio
         const positions = [
-            { x: 20, y: 40 },   // Row 1
-            { x: 115, y: 40 },  // Row 1
-            { x: 20, y: 110 },  // Row 2
-            { x: 115, y: 110 }, // Row 2
-            { x: 20, y: 180 },  // Row 3
-            { x: 115, y: 180 }, // Row 3
+            { x: 15, y: 30 },     // Row 1, Col 1
+            { x: 110, y: 30 },    // Row 1, Col 2 (15 + 90 + 5)
+            { x: 15, y: 102.5 },  // Row 2, Col 1 (30 + 67.5 + 5)
+            { x: 110, y: 102.5 }, // Row 2, Col 2
+            { x: 15, y: 175 },    // Row 3, Col 1 (102.5 + 67.5 + 5)
+            { x: 110, y: 175 },   // Row 3, Col 2
         ];
 
         for (let i = 0; i < 6; i++) {
             const marker = markers[i];
-            const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker.lat},${marker.lng}&zoom=19&size=600x400&maptype=satellite&markers=color:red%7Clabel:${i + 1}%7C${marker.lat},${marker.lng}&key=${apiKey}`;
+            const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker.lat},${marker.lng}&zoom=18&size=600x400&maptype=satellite&markers=color:red%7Clabel:${i + 1}%7C${marker.lat},${marker.lng}&key=${apiKey}`;
             const imgData = await fetchImageAsDataURL(staticMapUrl);
-            doc.addImage(imgData, 'JPEG', positions[i].x, positions[i].y, 85, 60);
+            doc.addImage(imgData, 'JPEG', positions[i].x, positions[i].y, imageWidth, imageHeight);
         }
 
         // Second page with table
         doc.addPage();
         doc.setFontSize(18);
+        // Calculate cumulative times for PDF
+        const cumulativeTimes = calculateCumulativeTimes(distances, speed);
+
+        // Determine where to start the table
+        let tableStartY = 40;
+        // Add speed just above the table
+        doc.text(`Speed: ${speed} km/h`, 20, tableStartY - 10);
 
         // Add table below the images on second page
         autoTable(doc, {
-            head: [['From', 'To', 'Distance (km)', 'Time (min:sec)']],
+            head: [['From', 'To', 'Distance (km)', 'Time (min:sec)', 'Cumulative Time (hh:mm:ss)']],
             body: distances.map((dist, index) => {
                 const { minutes, seconds } = calculateTime(dist, speed);
                 return [
                     index + 1,
                     index + 2 > markers.length ? 1 : index + 2,
                     (dist / 1000).toFixed(2),
-                    `${minutes}:${seconds.toString().padStart(2, '0')}`
+                    `${minutes}:${seconds.toString().padStart(2, '0')}`,
+                    formatTimeHMS(cumulativeTimes[index])
                 ];
             }),
             theme: 'grid',
             styles: { cellPadding: 5, fontSize: 12 },
-            margin: { horizontal: 20 }
+            margin: { horizontal: 20 },
+            startY: tableStartY
         });
 
         // Add marker coordinates below the table
@@ -339,11 +370,11 @@ export default function GoogleMaps() {
 
     return (
         <div>
-            <div className="h-[600px]" ref={mapRef} />
+            <div className="h-[500px]" ref={mapRef} />
             <div className="mt-4">
                 <button
                     onClick={clearMarkers}
-                    className="px-4 py-2 bg-red-500 text-white rounded"
+                    className="px-4 py-2 bg-red-500 hover:bg-red-800 text-white rounded ml-2 transition-colors"
                 >
                     Clear All Markers
                 </button>
@@ -399,22 +430,27 @@ export default function GoogleMaps() {
                                     <th className="border border-gray-300 p-2">To Marker</th>
                                     <th className="border border-gray-300 p-2">Distance (km)</th>
                                     <th className="border border-gray-300 p-2">Time (min:sec)</th>
+                                    <th className="border border-gray-300 p-2">Cumulative Time (hh:mm:ss)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {distances.map((dist, index) => {
-                                    const { minutes, seconds } = calculateTime(dist, speed);
-                                    return (
-                                        <tr key={index}>
-                                            <td className="border border-gray-300 p-2">{index + 1}</td>
-                                            <td className="border border-gray-300 p-2">
-                                                {index + 2 > markers.length ? 1 : index + 2}
-                                            </td>
-                                            <td className="border border-gray-300 p-2">{(dist / 1000).toFixed(2)}</td>
-                                            <td className="border border-gray-300 p-2">{`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`}</td>
-                                        </tr>
-                                    );
-                                })}
+                                {(() => {
+                                    const cumulativeTimes = calculateCumulativeTimes(distances, speed);
+                                    return distances.map((dist, index) => {
+                                        const { minutes, seconds } = calculateTime(dist, speed);
+                                        return (
+                                            <tr key={index}>
+                                                <td className="border border-gray-300 p-2">{index + 1}</td>
+                                                <td className="border border-gray-300 p-2">
+                                                    {index + 2 > markers.length ? 1 : index + 2}
+                                                </td>
+                                                <td className="border border-gray-300 p-2">{(dist / 1000).toFixed(2)}</td>
+                                                <td className="border border-gray-300 p-2">{`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`}</td>
+                                                <td className="border border-gray-300 p-2">{formatTimeHMS(cumulativeTimes[index])}</td>
+                                            </tr>
+                                        );
+                                    });
+                                })()}
                             </tbody>
                         </table>
                     </div>

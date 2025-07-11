@@ -9,8 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@googlemaps/js-api-loader": "^1.16.8",
-    "@tailwindcss/postcss": "^4.1.10",
+    "@googlemaps/js-api-loader": "^1.16.10",
+    "@tailwindcss/postcss": "^4.1.11",
     "@types/google.maps": "^3.58.1",
     "autoprefixer": "^10.4.21",
     "jspdf": "^3.0.1",
@@ -26,7 +26,7 @@
     "eslint": "^9",
     "eslint-config-next": "^15.1.8",
     "postcss": "^8",
-    "tailwindcss": "^4.1.10",
+    "tailwindcss": "^4.1.11",
     "typescript": "^5"
   }
 }
