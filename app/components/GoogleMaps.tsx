@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
+import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -87,13 +87,13 @@ export default function GoogleMaps() {
             const response = await fetch("/api/config");
             const { googleMapsApiKey } = await response.json();
             setApiKey(googleMapsApiKey);
-            const loader = new Loader({
-                apiKey: googleMapsApiKey,
-                version: 'quarterly',
+            setOptions({
+                key: googleMapsApiKey,
+                v: 'quarterly',
                 libraries: ['geometry'] // Required for distance calculations
             });
 
-            const { Map } = await loader.importLibrary('maps');
+            const { Map } = await importLibrary('maps');
 
             const locationInMap = {
                 lat: 45.657974,
