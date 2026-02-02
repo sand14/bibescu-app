@@ -12,12 +12,12 @@
     "@googlemaps/js-api-loader": "^2.0.2",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/google.maps": "^3.58.1",
-    "autoprefixer": "^10.4.23",
+    "autoprefixer": "^10.4.24",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
-    "next": "^16.0.10",
-    "react": "^19.0.3",
-    "react-dom": "^19.0.3"
+    "next": "^16.0.11",
+    "react": "^19.0.4",
+    "react-dom": "^19.0.4"
   },
   "devDependencies": {
     "@types/node": "^24",
