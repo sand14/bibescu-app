@@ -61,8 +61,7 @@ export default function GoogleMaps() {
     const polygonRef = useRef<google.maps.Polygon | null>(null);
     const markersRef = useRef<google.maps.Marker[]>([]);
 
-    // Initialize marker counter
-    let markerCounter = useRef<number>(1);
+    const getMarkerName = (index: number) => index === 0 ? 'SP/FP' : `T${index}`;
 
     // Polygon coordinates in decimal degrees
     const polygonCoordinates = [
@@ -126,17 +125,20 @@ export default function GoogleMaps() {
 
             const handleMapClick = (e: google.maps.MapMouseEvent) => {
                 if (e.latLng) {
-                    const newMarker = {
-                        lat: e.latLng.lat(),
-                        lng: e.latLng.lng(),
-                        name: `Marker ${markerCounter.current++}`
-                    };
+                    const lat = e.latLng.lat();
+                    const lng = e.latLng.lng();
 
                     setMarkers(prevMarkers => {
                         if (prevMarkers.length >= 6) {
                             alert('You can only add up to 6 markers.');
                             return prevMarkers;
                         }
+
+                        const newMarker = {
+                            lat,
+                            lng,
+                            name: getMarkerName(prevMarkers.length)
+                        };
 
                         const updatedMarkers = [...prevMarkers, newMarker];
 
@@ -223,8 +225,8 @@ export default function GoogleMaps() {
             body: distances.map((dist, index) => {
                 const { minutes, seconds } = calculateTime(dist, speed);
                 return [
-                    index + 1,
-                    index + 2 > markers.length ? 1 : index + 2,
+                    markers[index].name,
+                    markers[(index + 1) % markers.length].name,
                     (dist / 1000).toFixed(2),
                     `${minutes}:${seconds.toString().padStart(2, '0')}`,
                     formatTimeHMS(cumulativeTimes[index])
@@ -277,8 +279,6 @@ export default function GoogleMaps() {
         // Reset distance and distances
         setDistance(null);
         setDistances([]);
-        // Reset the marker counter to 1
-        markerCounter.current = 1;
     };
 
     // Ensure markers are managed correctly
@@ -440,9 +440,9 @@ export default function GoogleMaps() {
                                         const { minutes, seconds } = calculateTime(dist, speed);
                                         return (
                                             <tr key={index}>
-                                                <td className="border border-gray-300 p-2">{index + 1}</td>
+                                                <td className="border border-gray-300 p-2">{markers[index].name}</td>
                                                 <td className="border border-gray-300 p-2">
-                                                    {index + 2 > markers.length ? 1 : index + 2}
+                                                    {markers[(index + 1) % markers.length].name}
                                                 </td>
                                                 <td className="border border-gray-300 p-2">{(dist / 1000).toFixed(2)}</td>
                                                 <td className="border border-gray-300 p-2">{`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`}</td>
