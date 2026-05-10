@@ -365,26 +365,17 @@ export default function GoogleMaps() {
                 20, finalY + 25 + idx * 8);
         });
 
-        // Page 3: OSM route overview
+        // Page 3: OSM route overview (full page)
         doc.addPage();
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Route Overview', pageWidth / 2, 15, { align: 'center' });
 
         const { dataUrl: osmDataUrl, canvasWidth, canvasHeight } = await generateOSMMapImage(markers);
-        const marginH = 10, marginTop = 25, marginBottom = 15;
-        const availW = pageWidth - marginH * 2;
-        const availH = pageHeight - marginTop - marginBottom;
         const aspect = canvasWidth / canvasHeight;
-        let imgW = availW;
+        let imgW = pageWidth;
         let imgH = imgW / aspect;
-        if (imgH > availH) { imgH = availH; imgW = imgH * aspect; }
-        const imgX = marginH + (availW - imgW) / 2;
-        doc.addImage(osmDataUrl, 'PNG', imgX, marginTop, imgW, imgH, undefined, 'FAST');
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        doc.text('© OpenStreetMap contributors | openstreetmap.org/copyright',
-            pageWidth / 2, marginTop + imgH + 5, { align: 'center' });
+        if (imgH > pageHeight) { imgH = pageHeight; imgW = imgH * aspect; }
+        const imgX = (pageWidth - imgW) / 2;
+        const imgY = (pageHeight - imgH) / 2;
+        doc.addImage(osmDataUrl, 'PNG', imgX, imgY, imgW, imgH, undefined, 'FAST');
 
         doc.save('journey-report.pdf');
     };
