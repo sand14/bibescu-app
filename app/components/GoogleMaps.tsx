@@ -404,7 +404,7 @@ export default function GoogleMaps() {
         // Page 3: OSM route overview (full page)
         doc.addPage();
 
-        const { dataUrl: osmDataUrl, canvasWidth, canvasHeight } = await generateOSMMapImage(markers);
+        const { dataUrl: osmDataUrl, canvasWidth, canvasHeight } = await generateOSMMapImage(markers, pageWidth / pageHeight);
         const aspect = canvasWidth / canvasHeight;
         let imgW = pageWidth;
         let imgH = imgW / aspect;
