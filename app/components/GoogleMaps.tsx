@@ -218,12 +218,12 @@ export default function GoogleMaps() {
             return { px: (wx - originTX) * TILE_SIZE, py: (wy - originTY) * TILE_SIZE };
         };
 
-        // Auto-select zoom so tile grid fits within 6×6
+        // Auto-select zoom so tile grid fits within 8×8
         let zoom = 6;
         for (let z = 12; z >= 6; z--) {
             const cols = lon2tile(paddedMaxLng, z) - lon2tile(paddedMinLng, z) + 1;
             const rows = lat2tile(paddedMinLat, z) - lat2tile(paddedMaxLat, z) + 1;
-            if (cols <= 6 && rows <= 6) { zoom = z; break; }
+            if (cols <= 8 && rows <= 8) { zoom = z; break; }
         }
 
         const txMin = lon2tile(paddedMinLng, zoom);
