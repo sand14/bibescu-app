@@ -185,7 +185,7 @@ export default function GoogleMaps() {
         mkrs: Array<{ lat: number; lng: number; name: string }>
     ): Promise<{ dataUrl: string; canvasWidth: number; canvasHeight: number }> => {
         const TILE_SIZE = 256;
-        const PADDING = 0.15;
+        const PADDING = 0.06;
 
         const lats = mkrs.map(m => m.lat);
         const lngs = mkrs.map(m => m.lng);
@@ -271,27 +271,23 @@ export default function GoogleMaps() {
         pts.forEach((pt, i) => {
             // White halo
             ctx.beginPath();
-            ctx.arc(pt.px, pt.py, 11, 0, 2 * Math.PI);
+            ctx.arc(pt.px, pt.py, 7, 0, 2 * Math.PI);
             ctx.fillStyle = 'white';
             ctx.fill();
             // Coloured circle
             ctx.beginPath();
-            ctx.arc(pt.px, pt.py, 9, 0, 2 * Math.PI);
+            ctx.arc(pt.px, pt.py, 5, 0, 2 * Math.PI);
             ctx.fillStyle = i === 0 ? '#1a73e8' : '#FF3300';
             ctx.fill();
-            // Label inside circle
-            ctx.font = 'bold 9px Arial';
+            // Label above circle
+            ctx.font = 'bold 10px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillStyle = 'white';
-            ctx.fillText(mkrs[i].name, pt.px, pt.py);
-            // Label above circle
-            ctx.font = 'bold 12px Arial';
             ctx.strokeStyle = 'white';
             ctx.lineWidth = 3;
-            ctx.strokeText(mkrs[i].name, pt.px, pt.py - 18);
+            ctx.strokeText(mkrs[i].name, pt.px, pt.py - 13);
             ctx.fillStyle = '#222';
-            ctx.fillText(mkrs[i].name, pt.px, pt.py - 18);
+            ctx.fillText(mkrs[i].name, pt.px, pt.py - 13);
         });
 
         return { dataUrl: canvas.toDataURL('image/png'), canvasWidth: canvas.width, canvasHeight: canvas.height };
