@@ -182,7 +182,8 @@ export default function GoogleMaps() {
     }, []);
 
     const generateOSMMapImage = async (
-        mkrs: Array<{ lat: number; lng: number; name: string }>
+        mkrs: Array<{ lat: number; lng: number; name: string }>,
+        targetAspect?: number
     ): Promise<{ dataUrl: string; canvasWidth: number; canvasHeight: number }> => {
         const TILE_SIZE = 256;
         const PADDING = 0.06;
@@ -226,12 +227,32 @@ export default function GoogleMaps() {
             if (cols <= 8 && rows <= 8) { zoom = z; break; }
         }
 
-        const txMin = lon2tile(paddedMinLng, zoom);
-        const txMax = lon2tile(paddedMaxLng, zoom);
-        const tyMin = lat2tile(paddedMaxLat, zoom);
-        const tyMax = lat2tile(paddedMinLat, zoom);
-        const cols = txMax - txMin + 1;
-        const rows = tyMax - tyMin + 1;
+        let txMin = lon2tile(paddedMinLng, zoom);
+        let txMax = lon2tile(paddedMaxLng, zoom);
+        let tyMin = lat2tile(paddedMaxLat, zoom);
+        let tyMax = lat2tile(paddedMinLat, zoom);
+        let cols = txMax - txMin + 1;
+        let rows = tyMax - tyMin + 1;
+
+        // Expand tile grid symmetrically to better match target page aspect ratio
+        if (targetAspect) {
+            const currentAspect = cols / rows;
+            if (currentAspect > targetAspect) {
+                // Canvas too wide: add rows symmetrically up to limit of 8
+                const targetRows = Math.min(8, Math.round(cols / targetAspect));
+                const extra = targetRows - rows;
+                tyMin -= Math.floor(extra / 2);
+                tyMax += Math.ceil(extra / 2);
+            } else if (currentAspect < targetAspect) {
+                // Canvas too tall: add cols symmetrically up to limit of 8
+                const targetCols = Math.min(8, Math.round(rows * targetAspect));
+                const extra = targetCols - cols;
+                txMin -= Math.floor(extra / 2);
+                txMax += Math.ceil(extra / 2);
+            }
+            cols = txMax - txMin + 1;
+            rows = tyMax - tyMin + 1;
+        }
 
         const canvas = document.createElement('canvas');
         canvas.width = cols * TILE_SIZE;
@@ -300,8 +321,14 @@ export default function GoogleMaps() {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
-        const { dataUrl: osmDataUrl } = await generateOSMMapImage(markers);
-        doc.addImage(osmDataUrl, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
+        const { dataUrl: osmDataUrl, canvasWidth, canvasHeight } = await generateOSMMapImage(markers, pageWidth / pageHeight);
+        const aspect = canvasWidth / canvasHeight;
+        let imgW = pageWidth;
+        let imgH = imgW / aspect;
+        if (imgH > pageHeight) { imgH = pageHeight; imgW = imgH * aspect; }
+        const imgX = (pageWidth - imgW) / 2;
+        const imgY = (pageHeight - imgH) / 2;
+        doc.addImage(osmDataUrl, 'PNG', imgX, imgY, imgW, imgH, undefined, 'FAST');
 
         doc.save('a3-map.pdf');
     };
