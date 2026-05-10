@@ -296,7 +296,7 @@ export default function GoogleMaps() {
     const handleGenerateA3Map = async () => {
         if (markers.length !== 6) return;
 
-        const doc = new jsPDF('landscape', 'mm', 'a3');
+        const doc = new jsPDF('portrait', 'mm', 'a3');
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
