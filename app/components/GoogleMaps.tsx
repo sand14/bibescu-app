@@ -181,6 +181,122 @@ export default function GoogleMaps() {
         initializeMap();
     }, []);
 
+    const generateOSMMapImage = async (
+        mkrs: Array<{ lat: number; lng: number; name: string }>
+    ): Promise<{ dataUrl: string; canvasWidth: number; canvasHeight: number }> => {
+        const TILE_SIZE = 256;
+        const PADDING = 0.15;
+
+        const lats = mkrs.map(m => m.lat);
+        const lngs = mkrs.map(m => m.lng);
+        let minLat = Math.min(...lats);
+        let maxLat = Math.max(...lats);
+        let minLng = Math.min(...lngs);
+        let maxLng = Math.max(...lngs);
+
+        // Guard against zero-size bounding box
+        if (minLat === maxLat) { minLat -= 0.01; maxLat += 0.01; }
+        if (minLng === maxLng) { minLng -= 0.01; maxLng += 0.01; }
+
+        const latPad = (maxLat - minLat) * PADDING;
+        const lngPad = (maxLng - minLng) * PADDING;
+        const paddedMinLat = Math.max(-85.05, minLat - latPad);
+        const paddedMaxLat = Math.min(85.05, maxLat + latPad);
+        const paddedMinLng = Math.max(-180, minLng - lngPad);
+        const paddedMaxLng = Math.min(180, maxLng + lngPad);
+
+        const lon2tile = (lon: number, z: number) =>
+            Math.floor((lon + 180) / 360 * Math.pow(2, z));
+        const lat2tile = (lat: number, z: number) => {
+            const r = lat * Math.PI / 180;
+            return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z));
+        };
+        const latLngToPixel = (lat: number, lng: number, z: number, originTX: number, originTY: number) => {
+            const r = lat * Math.PI / 180;
+            const wx = (lng + 180) / 360 * Math.pow(2, z);
+            const wy = (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z);
+            return { px: (wx - originTX) * TILE_SIZE, py: (wy - originTY) * TILE_SIZE };
+        };
+
+        // Auto-select zoom so tile grid fits within 6×6
+        let zoom = 6;
+        for (let z = 12; z >= 6; z--) {
+            const cols = lon2tile(paddedMaxLng, z) - lon2tile(paddedMinLng, z) + 1;
+            const rows = lat2tile(paddedMinLat, z) - lat2tile(paddedMaxLat, z) + 1;
+            if (cols <= 6 && rows <= 6) { zoom = z; break; }
+        }
+
+        const txMin = lon2tile(paddedMinLng, zoom);
+        const txMax = lon2tile(paddedMaxLng, zoom);
+        const tyMin = lat2tile(paddedMaxLat, zoom);
+        const tyMax = lat2tile(paddedMinLat, zoom);
+        const cols = txMax - txMin + 1;
+        const rows = tyMax - tyMin + 1;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = cols * TILE_SIZE;
+        canvas.height = rows * TILE_SIZE;
+        const ctx = canvas.getContext('2d')!;
+        ctx.fillStyle = '#e8e8e8';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Fetch all tiles in parallel via the proxy (avoids CORS canvas taint)
+        await Promise.all(
+            Array.from({ length: rows }, (_, ry) =>
+                Array.from({ length: cols }, (_, rx) => {
+                    const tx = txMin + rx;
+                    const ty = tyMin + ry;
+                    return new Promise<void>(resolve => {
+                        const img = new Image();
+                        img.onload = () => { ctx.drawImage(img, rx * TILE_SIZE, ry * TILE_SIZE, TILE_SIZE, TILE_SIZE); resolve(); };
+                        img.onerror = () => resolve();
+                        img.src = `/api/tile?z=${zoom}&x=${tx}&y=${ty}`;
+                    });
+                })
+            ).flat()
+        );
+
+        // Draw closed-loop route polyline
+        const pts = mkrs.map(m => latLngToPixel(m.lat, m.lng, zoom, txMin, tyMin));
+        ctx.beginPath();
+        ctx.moveTo(pts[0].px, pts[0].py);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].px, pts[i].py);
+        ctx.lineTo(pts[0].px, pts[0].py);
+        ctx.strokeStyle = '#FF3300';
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+
+        // Draw markers
+        pts.forEach((pt, i) => {
+            // White halo
+            ctx.beginPath();
+            ctx.arc(pt.px, pt.py, 11, 0, 2 * Math.PI);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            // Coloured circle
+            ctx.beginPath();
+            ctx.arc(pt.px, pt.py, 9, 0, 2 * Math.PI);
+            ctx.fillStyle = i === 0 ? '#1a73e8' : '#FF3300';
+            ctx.fill();
+            // Label inside circle
+            ctx.font = 'bold 9px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'white';
+            ctx.fillText(mkrs[i].name, pt.px, pt.py);
+            // Label above circle
+            ctx.font = 'bold 12px Arial';
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            ctx.strokeText(mkrs[i].name, pt.px, pt.py - 18);
+            ctx.fillStyle = '#222';
+            ctx.fillText(mkrs[i].name, pt.px, pt.py - 18);
+        });
+
+        return { dataUrl: canvas.toDataURL('image/png'), canvasWidth: canvas.width, canvasHeight: canvas.height };
+    };
+
     const handleGeneratePDF = async () => {
         if (markers.length !== 6 || !apiKey) return;
 
@@ -248,6 +364,27 @@ export default function GoogleMaps() {
             doc.text(`${marker.name}: Lat: ${marker.lat.toFixed(6)}, Lng: ${marker.lng.toFixed(6)}`,
                 20, finalY + 25 + idx * 8);
         });
+
+        // Page 3: OSM route overview
+        doc.addPage();
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Route Overview', pageWidth / 2, 15, { align: 'center' });
+
+        const { dataUrl: osmDataUrl, canvasWidth, canvasHeight } = await generateOSMMapImage(markers);
+        const marginH = 10, marginTop = 25, marginBottom = 15;
+        const availW = pageWidth - marginH * 2;
+        const availH = pageHeight - marginTop - marginBottom;
+        const aspect = canvasWidth / canvasHeight;
+        let imgW = availW;
+        let imgH = imgW / aspect;
+        if (imgH > availH) { imgH = availH; imgW = imgH * aspect; }
+        const imgX = marginH + (availW - imgW) / 2;
+        doc.addImage(osmDataUrl, 'PNG', imgX, marginTop, imgW, imgH, undefined, 'FAST');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text('© OpenStreetMap contributors | openstreetmap.org/copyright',
+            pageWidth / 2, marginTop + imgH + 5, { align: 'center' });
 
         doc.save('journey-report.pdf');
     };
