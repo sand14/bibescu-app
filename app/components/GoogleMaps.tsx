@@ -293,6 +293,25 @@ export default function GoogleMaps() {
         return { dataUrl: canvas.toDataURL('image/png'), canvasWidth: canvas.width, canvasHeight: canvas.height };
     };
 
+    const handleGenerateA3Map = async () => {
+        if (markers.length !== 6) return;
+
+        const doc = new jsPDF('landscape', 'mm', 'a3');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        const { dataUrl: osmDataUrl, canvasWidth, canvasHeight } = await generateOSMMapImage(markers);
+        const aspect = canvasWidth / canvasHeight;
+        let imgW = pageWidth;
+        let imgH = imgW / aspect;
+        if (imgH > pageHeight) { imgH = pageHeight; imgW = imgH * aspect; }
+        const imgX = (pageWidth - imgW) / 2;
+        const imgY = (pageHeight - imgH) / 2;
+        doc.addImage(osmDataUrl, 'PNG', imgX, imgY, imgW, imgH, undefined, 'FAST');
+
+        doc.save('a3-map.pdf');
+    };
+
     const handleGeneratePDF = async () => {
         if (markers.length !== 6 || !apiKey) return;
 
@@ -509,6 +528,13 @@ export default function GoogleMaps() {
                     disabled={markers.length !== 6 || !apiKey}
                 >
                     Generate PDF Report
+                </button>
+                <button
+                    onClick={handleGenerateA3Map}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded ml-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    disabled={markers.length !== 6}
+                >
+                    Generate A3 MAP
                 </button>
                 <div className="mt-4">
                     <label htmlFor="speed" className="block text-sm font-medium text-gray-700">Select Speed (km/h): {speed} km/h</label>
