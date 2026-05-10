@@ -300,14 +300,8 @@ export default function GoogleMaps() {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
-        const { dataUrl: osmDataUrl, canvasWidth, canvasHeight } = await generateOSMMapImage(markers);
-        const aspect = canvasWidth / canvasHeight;
-        let imgW = pageWidth;
-        let imgH = imgW / aspect;
-        if (imgH > pageHeight) { imgH = pageHeight; imgW = imgH * aspect; }
-        const imgX = (pageWidth - imgW) / 2;
-        const imgY = (pageHeight - imgH) / 2;
-        doc.addImage(osmDataUrl, 'PNG', imgX, imgY, imgW, imgH, undefined, 'FAST');
+        const { dataUrl: osmDataUrl } = await generateOSMMapImage(markers);
+        doc.addImage(osmDataUrl, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
 
         doc.save('a3-map.pdf');
     };
