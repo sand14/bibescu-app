@@ -311,6 +311,52 @@ export default function GoogleMaps() {
             ctx.fillText(mkrs[i].name, pt.px, pt.py - 13);
         });
 
+        // --- Map scale bar ---
+        // Meters per pixel at the centre latitude for the current zoom level
+        const centerLat = (paddedMinLat + paddedMaxLat) / 2;
+        const metersPerPixel =
+            (2 * Math.PI * 6378137 * Math.cos(centerLat * Math.PI / 180)) /
+            (TILE_SIZE * Math.pow(2, zoom));
+
+        // Pick a "nice" round km value whose bar width is between 60 and 200 px
+        const niceKm = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500];
+        const targetBarKm = niceKm.find(km => {
+            const px = (km * 1000) / metersPerPixel;
+            return px >= 60 && px <= 200;
+        }) ?? niceKm[niceKm.length - 1];
+        const barPx = (targetBarKm * 1000) / metersPerPixel;
+
+        // Draw scale bar in the bottom-left corner
+        const barX = 20;
+        const barY = canvas.height - 28;
+        const barH = 6;
+        const fontSize = 14;
+        const label = targetBarKm >= 1 ? `${targetBarKm} km` : `${targetBarKm * 1000} m`;
+
+        // White background pill for readability
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.beginPath();
+        ctx.roundRect(barX - 8, barY - fontSize - 4, barPx + 16, fontSize + barH + 12, 4);
+        ctx.fill();
+
+        // Bar ticks and fill
+        ctx.fillStyle = '#333';
+        ctx.fillRect(barX, barY, barPx, barH);
+        // Left tick
+        ctx.fillRect(barX, barY - 4, 2, barH + 4);
+        // Right tick
+        ctx.fillRect(barX + barPx - 2, barY - 4, 2, barH + 4);
+
+        // Labels
+        ctx.font = `bold ${fontSize}px Arial`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        ctx.fillStyle = '#111';
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 3;
+        ctx.strokeText(label, barX, barY - 2);
+        ctx.fillText(label, barX, barY - 2);
+
         return { dataUrl: canvas.toDataURL('image/png'), canvasWidth: canvas.width, canvasHeight: canvas.height };
     };
 
