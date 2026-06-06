@@ -376,7 +376,9 @@ export default function GoogleMaps() {
         const imgY = (pageHeight - imgH) / 2;
         doc.addImage(osmDataUrl, 'PNG', imgX, imgY, imgW, imgH, undefined, 'FAST');
 
-        doc.save('a3-map.pdf');
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+        doc.save(`a3-map_${timestamp}.pdf`);
     };
 
     const handleGeneratePDF = async () => {
@@ -459,7 +461,9 @@ export default function GoogleMaps() {
         const imgY = (pageHeight - imgH) / 2;
         doc.addImage(osmDataUrl, 'PNG', imgX, imgY, imgW, imgH, undefined, 'FAST');
 
-        doc.save('journey-report.pdf');
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+        doc.save(`journey-report_${timestamp}.pdf`);
     };
 
     // Add this helper function
