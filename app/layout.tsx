@@ -22,7 +22,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={`${inter.className} bg-slate-900 text-slate-100 min-h-screen`}>
+        <header className="fixed top-0 left-0 right-0 h-14 z-50 bg-slate-900 border-b border-slate-700 flex items-center px-5">
+          <span className="text-lg mr-2 select-none">✈</span>
+          <span className="text-base font-semibold tracking-tight text-slate-100">Calculator Bibescu</span>
+        </header>
+        <main className="pt-14">{children}</main>
+      </body>
     </html>
   );
 }
