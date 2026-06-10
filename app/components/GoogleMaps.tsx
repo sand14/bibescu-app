@@ -79,6 +79,8 @@ export default function GoogleMaps() {
     ];
 
     const [apiKey, setApiKey] = useState<string>('');
+    const [isPdfLoading, setIsPdfLoading] = useState(false);
+    const [isA3Loading, setIsA3Loading] = useState(false);
 
     // Initialize the map only once
     useEffect(() => {
@@ -362,6 +364,8 @@ export default function GoogleMaps() {
 
     const handleGenerateA3Map = async () => {
         if (markers.length !== 6) return;
+        setIsA3Loading(true);
+        try {
 
         const doc = new jsPDF('portrait', 'mm', 'a3');
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -379,10 +383,15 @@ export default function GoogleMaps() {
         const now = new Date();
         const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
         doc.save(`a3-map_${timestamp}.pdf`);
+        } finally {
+            setIsA3Loading(false);
+        }
     };
 
     const handleGeneratePDF = async () => {
         if (markers.length !== 6 || !apiKey) return;
+        setIsPdfLoading(true);
+        try {
 
         const doc = new jsPDF('portrait', 'mm', 'a4');
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -464,6 +473,9 @@ export default function GoogleMaps() {
         const now = new Date();
         const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
         doc.save(`journey-report_${timestamp}.pdf`);
+        } finally {
+            setIsPdfLoading(false);
+        }
     };
 
     // Add this helper function
@@ -583,32 +595,50 @@ export default function GoogleMaps() {
         }
     }, [markers, map, speed]);
 
+    const Spinner = () => (
+        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+    );
+
     return (
-        <div>
-            <div className="h-[500px]" ref={mapRef} />
-            <div className="mt-4">
-                <button
-                    onClick={clearMarkers}
-                    className="px-4 py-2 bg-red-500 hover:bg-red-800 text-white rounded ml-2 transition-colors"
-                >
-                    Clear All Markers
-                </button>
-                <button
-                    onClick={handleGeneratePDF}
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded ml-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                    disabled={markers.length !== 6 || !apiKey}
-                >
-                    Generate PDF Report
-                </button>
-                <button
-                    onClick={handleGenerateA3Map}
-                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded ml-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                    disabled={markers.length !== 6}
-                >
-                    Generate A3 MAP
-                </button>
-                <div className="mt-4">
-                    <label htmlFor="speed" className="block text-sm font-medium text-gray-700">Select Speed (km/h): {speed} km/h</label>
+        <div className="lg:flex lg:flex-row lg:h-[calc(100vh-3.5rem)] lg:overflow-hidden">
+
+            {/* Map */}
+            <div className="h-[50vh] lg:h-full lg:flex-1" ref={mapRef} />
+
+            {/* Right panel */}
+            <div className="lg:w-96 lg:h-full lg:overflow-y-auto border-t border-slate-700 lg:border-t-0 lg:border-l lg:border-slate-700 bg-slate-900 p-4 space-y-4">
+
+                {/* Progress */}
+                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                    <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Route Setup</h2>
+                    <div className="flex gap-2 mb-2">
+                        {Array.from({ length: 6 }, (_, i) => (
+                            <div
+                                key={i}
+                                className={`h-3 w-3 rounded-full border-2 transition-all duration-200 ${
+                                    i < markers.length
+                                        ? 'bg-blue-500 border-blue-500'
+                                        : 'bg-transparent border-slate-600'
+                                }`}
+                            />
+                        ))}
+                    </div>
+                    <p className="text-sm text-slate-400">
+                        {markers.length === 6
+                            ? 'Route complete — ready to export'
+                            : `${markers.length} of 6 markers placed`}
+                    </p>
+                </div>
+
+                {/* Speed */}
+                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                    <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Speed</h2>
+                        <span className="text-sm font-bold text-amber-400 bg-slate-700 px-2 py-0.5 rounded-md">{speed} km/h</span>
+                    </div>
                     <input
                         id="speed"
                         type="range"
@@ -617,66 +647,117 @@ export default function GoogleMaps() {
                         max="180"
                         value={speed}
                         onChange={(e) => setSpeed(parseInt(e.target.value))}
-                        className="w-full mt-2"
                     />
+                    <div className="flex justify-between text-xs text-slate-500 mt-1">
+                        <span>100</span>
+                        <span>180</span>
+                    </div>
                 </div>
-                <h3 className="mt-4">Markers Coordinates:</h3>
-                <ul>
-                    {markers.map((marker, index) => (
-                        <li key={index}>
-                            {`${marker.name}: Lat: ${marker.lat.toFixed(6)}, Lng: ${marker.lng.toFixed(6)}`}
-                        </li>
-                    ))}
-                </ul>
-                {distance !== null && (
-                    <div>
-                        <h3>Total Distance: {(distance / 1000).toFixed(2)} km</h3>
-                        {/* Calculate and display total travel time */}
-                        {(() => {
-                            const { hours, minutes, seconds } = calculateTotalTime(distances, speed);
-                            return (
-                                <p>
-                                    Total Time: {`${hours}:${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`}
+
+                {/* Actions */}
+                <div className="space-y-2">
+                    <button
+                        onClick={handleGeneratePDF}
+                        disabled={markers.length !== 6 || !apiKey || isPdfLoading}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors text-sm"
+                    >
+                        {isPdfLoading ? <><Spinner /> Generating…</> : 'Generate PDF Report'}
+                    </button>
+                    <button
+                        onClick={handleGenerateA3Map}
+                        disabled={markers.length !== 6 || isA3Loading}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-blue-400 font-medium rounded-lg transition-colors text-sm"
+                    >
+                        {isA3Loading ? <><Spinner /> Generating…</> : 'Generate A3 Map'}
+                    </button>
+                    <button
+                        onClick={clearMarkers}
+                        className="w-full px-4 py-2.5 border border-red-500/50 hover:border-red-400 hover:bg-red-500/10 text-red-400 font-medium rounded-lg transition-colors text-sm"
+                    >
+                        Clear All Markers
+                    </button>
+                </div>
+
+                {/* Waypoints */}
+                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                    <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Waypoints</h2>
+                    {markers.length === 0 ? (
+                        <p className="text-sm text-slate-500 italic">Click the map to place markers</p>
+                    ) : (
+                        <ul className="space-y-2">
+                            {markers.map((marker, index) => (
+                                <li key={index} className="flex items-center gap-2.5">
+                                    <span className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${index === 0 ? 'bg-blue-500' : 'bg-red-500'}`} />
+                                    <span className="text-xs font-bold text-slate-200 w-9 flex-shrink-0">{marker.name}</span>
+                                    <span className="text-xs font-mono text-slate-400 truncate">
+                                        {marker.lat.toFixed(5)}, {marker.lng.toFixed(5)}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+
+                {/* Stats */}
+                {distance !== null && (() => {
+                    const { hours, minutes, seconds } = calculateTotalTime(distances, speed);
+                    return (
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                                <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Distance</p>
+                                <p className="text-2xl font-bold text-slate-100 leading-none">{(distance / 1000).toFixed(2)}</p>
+                                <p className="text-xs text-slate-400 mt-1">km</p>
+                            </div>
+                            <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                                <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Total Time</p>
+                                <p className="text-xl font-bold text-slate-100 leading-none font-mono">
+                                    {`${hours}:${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`}
                                 </p>
-                            );
-                        })()}
-                    </div>
-                )}
+                                <p className="text-xs text-slate-400 mt-1">hh:mm:ss</p>
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {/* Leg details table */}
                 {distances.length > 0 && (
-                    <div className="mt-4">
-                        <h3>Distance and Time Between Markers:</h3>
-                        <table className="border-collapse border border-gray-200 w-full">
-                            <thead>
-                                <tr>
-                                    <th className="border border-gray-300 p-2">From Marker</th>
-                                    <th className="border border-gray-300 p-2">To Marker</th>
-                                    <th className="border border-gray-300 p-2">Distance (km)</th>
-                                    <th className="border border-gray-300 p-2">Time (min:sec)</th>
-                                    <th className="border border-gray-300 p-2">Cumulative Time (hh:mm:ss)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {(() => {
-                                    const cumulativeTimes = calculateCumulativeTimes(distances, speed);
-                                    return distances.map((dist, index) => {
-                                        const { minutes, seconds } = calculateTime(dist, speed);
-                                        return (
-                                            <tr key={index}>
-                                                <td className="border border-gray-300 p-2">{markers[index].name}</td>
-                                                <td className="border border-gray-300 p-2">
-                                                    {markers[(index + 1) % markers.length].name}
-                                                </td>
-                                                <td className="border border-gray-300 p-2">{(dist / 1000).toFixed(2)}</td>
-                                                <td className="border border-gray-300 p-2">{`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`}</td>
-                                                <td className="border border-gray-300 p-2">{formatTimeHMS(cumulativeTimes[index])}</td>
-                                            </tr>
-                                        );
-                                    });
-                                })()}
-                            </tbody>
-                        </table>
+                    <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+                        <div className="px-4 py-3 border-b border-slate-700">
+                            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Leg Details</h2>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="bg-slate-700 text-slate-300 text-xs uppercase">
+                                        <th className="px-3 py-2 text-left font-medium">From</th>
+                                        <th className="px-3 py-2 text-left font-medium">To</th>
+                                        <th className="px-3 py-2 text-right font-medium">km</th>
+                                        <th className="px-3 py-2 text-right font-medium">Time</th>
+                                        <th className="px-3 py-2 text-right font-medium">Cumul.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(() => {
+                                        const cumulativeTimes = calculateCumulativeTimes(distances, speed);
+                                        return distances.map((dist, index) => {
+                                            const { minutes, seconds } = calculateTime(dist, speed);
+                                            return (
+                                                <tr key={index} className={index % 2 === 0 ? 'bg-slate-800' : 'bg-slate-800/60'}>
+                                                    <td className="px-3 py-2 text-slate-300">{markers[index].name}</td>
+                                                    <td className="px-3 py-2 text-slate-300">{markers[(index + 1) % markers.length].name}</td>
+                                                    <td className="px-3 py-2 text-right text-slate-300">{(dist / 1000).toFixed(2)}</td>
+                                                    <td className="px-3 py-2 text-right font-mono text-slate-300">{`${minutes}:${seconds.toString().padStart(2, '0')}`}</td>
+                                                    <td className="px-3 py-2 text-right font-mono text-amber-400">{formatTimeHMS(cumulativeTimes[index])}</td>
+                                                </tr>
+                                            );
+                                        });
+                                    })()}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
+
             </div>
         </div>
     );
