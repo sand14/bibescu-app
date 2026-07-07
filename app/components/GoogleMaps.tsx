@@ -50,6 +50,40 @@ const calculateCumulativeTimes = (distances: number[], speed: number) => {
     });
 };
 
+const MAGNETIC_DECLINATION = 5.5; // degrees East, approximate for Romania (2026)
+
+const getSatellitePositions = (
+    count: number,
+    pageWidth: number
+): Array<{ x: number; y: number; w: number; h: number }> => {
+    const marginX = 15;
+    const startY = 30;
+    const gapX = 5;
+    const gapY = 5;
+    const imgW = (pageWidth - 2 * marginX - gapX) / 2;
+    const imgH = imgW * 0.75;
+    return Array.from({ length: count }, (_, i) => {
+        const isLast = i === count - 1 && count % 2 === 1;
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const x = isLast ? (pageWidth - imgW) / 2 : marginX + col * (imgW + gapX);
+        return { x, y: startY + row * (imgH + gapY), w: imgW, h: imgH };
+    });
+};
+
+const computeHeading = (
+    from: { lat: number; lng: number },
+    to: { lat: number; lng: number },
+    type: 'true' | 'magnetic'
+): string => {
+    const fromLatLng = new google.maps.LatLng(from.lat, from.lng);
+    const toLatLng = new google.maps.LatLng(to.lat, to.lng);
+    let hdg = google.maps.geometry.spherical.computeHeading(fromLatLng, toLatLng);
+    if (hdg < 0) hdg += 360;
+    if (type === 'magnetic') hdg = (hdg - MAGNETIC_DECLINATION + 360) % 360;
+    return hdg.toFixed(1) + '°';
+};
+
 export default function GoogleMaps() {
     const mapRef = useRef<HTMLDivElement>(null);
     const [markers, setMarkers] = useState<Array<{ lat: number, lng: number, name: string }>>([]);
@@ -81,6 +115,9 @@ export default function GoogleMaps() {
     const [apiKey, setApiKey] = useState<string>('');
     const [isPdfLoading, setIsPdfLoading] = useState(false);
     const [isA3Loading, setIsA3Loading] = useState(false);
+    const [maxPoints, setMaxPoints] = useState<number>(6);
+    const maxPointsRef = useRef<number>(6);
+    const [headingType, setHeadingType] = useState<'true' | 'magnetic'>('true');
 
     // Initialize the map only once
     useEffect(() => {
@@ -131,8 +168,8 @@ export default function GoogleMaps() {
                     const lng = e.latLng.lng();
 
                     setMarkers(prevMarkers => {
-                        if (prevMarkers.length >= 6) {
-                            alert('You can only add up to 6 markers.');
+                        if (prevMarkers.length >= maxPointsRef.current) {
+                            alert(`You can only add up to ${maxPointsRef.current} markers.`);
                             return prevMarkers;
                         }
 
@@ -363,7 +400,7 @@ export default function GoogleMaps() {
     };
 
     const handleGenerateA3Map = async () => {
-        if (markers.length !== 6) return;
+        if (markers.length !== maxPoints) return;
         setIsA3Loading(true);
         try {
 
@@ -389,7 +426,7 @@ export default function GoogleMaps() {
     };
 
     const handleGeneratePDF = async () => {
-        if (markers.length !== 6 || !apiKey) return;
+        if (markers.length !== maxPoints || !apiKey) return;
         setIsPdfLoading(true);
         try {
 
@@ -397,53 +434,51 @@ export default function GoogleMaps() {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
-        // First page with 6 markers
-        // Add a 5mm gap between columns and rows for better separation
-        const imageWidth = 90;
-        const imageHeight = 67.5; // keep 4:3 aspect ratio
-        const positions = [
-            { x: 15, y: 30 },     // Row 1, Col 1
-            { x: 110, y: 30 },    // Row 1, Col 2 (15 + 90 + 5)
-            { x: 15, y: 102.5 },  // Row 2, Col 1 (30 + 67.5 + 5)
-            { x: 110, y: 102.5 }, // Row 2, Col 2
-            { x: 15, y: 175 },    // Row 3, Col 1 (102.5 + 67.5 + 5)
-            { x: 110, y: 175 },   // Row 3, Col 2
-        ];
-
-        for (let i = 0; i < 6; i++) {
+        // First page: satellite thumbnails (one per marker, dynamic layout)
+        const imgPositions = getSatellitePositions(markers.length, pageWidth);
+        for (let i = 0; i < markers.length; i++) {
             const marker = markers[i];
             const markerLabel = i === 0 ? 'S' : `${i}`;
             const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker.lat},${marker.lng}&zoom=18&size=600x400&maptype=satellite&markers=color:red%7Clabel:${markerLabel}%7C${marker.lat},${marker.lng}&key=${apiKey}`;
             const imgData = await fetchImageAsDataURL(staticMapUrl);
-            doc.addImage(imgData, 'JPEG', positions[i].x, positions[i].y, imageWidth, imageHeight);
+            const pos = imgPositions[i];
+            doc.addImage(imgData, 'JPEG', pos.x, pos.y, pos.w, pos.h);
+            // Marker label below thumbnail
+            doc.setFontSize(9);
+            doc.setTextColor(80, 80, 80);
+            doc.text(marker.name, pos.x + pos.w / 2, pos.y + pos.h + 4, { align: 'center' });
         }
+        doc.setTextColor(0, 0, 0);
 
         // Second page with table
         doc.addPage();
-        doc.setFontSize(18);
-        // Calculate cumulative times for PDF
         const cumulativeTimes = calculateCumulativeTimes(distances, speed);
 
-        // Determine where to start the table
         let tableStartY = 40;
-        // Add speed just above the table
-        doc.text(`Speed: ${speed} km/h`, 20, tableStartY - 10);
+        const headingLabel = headingType === 'magnetic'
+            ? `Magnetic Heading (decl. ${MAGNETIC_DECLINATION}° E)`
+            : 'True Heading';
+        doc.setFontSize(12);
+        doc.text(`Speed: ${speed} km/h   |   ${headingLabel}`, 20, tableStartY - 10);
 
-        // Add table below the images on second page
+        const hdgColHeader = headingType === 'magnetic' ? 'Mag. Hdg' : 'True Hdg';
         autoTable(doc, {
-            head: [['From', 'To', 'Distance (km)', 'Time (min:sec)', 'Cumulative Time (hh:mm:ss)']],
+            head: [['From', 'To', hdgColHeader, 'Distance (km)', 'Time (min:sec)', 'Cumul. Time']],
             body: distances.map((dist, index) => {
                 const { minutes, seconds } = calculateTime(dist, speed);
+                const from = markers[index];
+                const to = markers[(index + 1) % markers.length];
                 return [
-                    markers[index].name,
-                    markers[(index + 1) % markers.length].name,
+                    from.name,
+                    to.name,
+                    computeHeading(from, to, headingType),
                     (dist / 1000).toFixed(2),
                     `${minutes}:${seconds.toString().padStart(2, '0')}`,
                     formatTimeHMS(cumulativeTimes[index])
                 ];
             }),
             theme: 'grid',
-            styles: { cellPadding: 5, fontSize: 12 },
+            styles: { cellPadding: 3, fontSize: 10 },
             margin: { horizontal: 20 },
             startY: tableStartY
         });
@@ -557,7 +592,7 @@ export default function GoogleMaps() {
                     newDistances.push(segmentDistance);
                 }
 
-                if (markers.length === 6) {
+                if (markers.length === maxPoints) {
                     // Calculate distance from last to first marker
                     const firstCoord = path[0];
                     const lastCoord = path[path.length - 1];
@@ -593,7 +628,7 @@ export default function GoogleMaps() {
                 }
             }
         }
-    }, [markers, map, speed]);
+    }, [markers, map, speed, maxPoints]);
 
     const Spinner = () => (
         <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -615,7 +650,7 @@ export default function GoogleMaps() {
                 <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
                     <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Route Setup</h2>
                     <div className="flex gap-2 mb-2">
-                        {Array.from({ length: 6 }, (_, i) => (
+                        {Array.from({ length: maxPoints }, (_, i) => (
                             <div
                                 key={i}
                                 className={`h-3 w-3 rounded-full border-2 transition-all duration-200 ${
@@ -627,10 +662,65 @@ export default function GoogleMaps() {
                         ))}
                     </div>
                     <p className="text-sm text-slate-400">
-                        {markers.length === 6
+                        {markers.length === maxPoints
                             ? 'Route complete — ready to export'
-                            : `${markers.length} of 6 markers placed`}
+                            : `${markers.length} of ${maxPoints} markers placed`}
                     </p>
+                </div>
+
+                {/* Configuration */}
+                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700 space-y-4">
+                    <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Configuration</h2>
+
+                    {/* Number of points */}
+                    <div>
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="text-sm text-slate-300">Number of Points</label>
+                            <span className="text-sm font-bold text-amber-400 bg-slate-700 px-2 py-0.5 rounded-md">{maxPoints}</span>
+                        </div>
+                        <input
+                            type="range"
+                            min="3"
+                            max="6"
+                            step="1"
+                            value={maxPoints}
+                            onChange={(e) => {
+                                const val = parseInt(e.target.value);
+                                maxPointsRef.current = val;
+                                setMaxPoints(val);
+                                if (markers.length > val) clearMarkers();
+                            }}
+                            className="w-full"
+                        />
+                        <div className="flex justify-between text-xs text-slate-500 mt-1">
+                            <span>3</span>
+                            <span>4</span>
+                            <span>5</span>
+                            <span>6</span>
+                        </div>
+                    </div>
+
+                    {/* Heading type */}
+                    <div>
+                        <label className="text-sm text-slate-300 block mb-2">Heading Type</label>
+                        <div className="flex flex-col gap-2">
+                            {(['true', 'magnetic'] as const).map((val) => (
+                                <label key={val} className="flex items-center gap-2 cursor-pointer group">
+                                    <input
+                                        type="radio"
+                                        name="headingType"
+                                        value={val}
+                                        checked={headingType === val}
+                                        onChange={() => setHeadingType(val)}
+                                        className="accent-blue-500"
+                                    />
+                                    <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors">
+                                        {val === 'true' ? 'True Heading' : `Magnetic Heading (±${MAGNETIC_DECLINATION}° E)`}
+                                    </span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Speed */}
@@ -658,14 +748,14 @@ export default function GoogleMaps() {
                 <div className="space-y-2">
                     <button
                         onClick={handleGeneratePDF}
-                        disabled={markers.length !== 6 || !apiKey || isPdfLoading}
+                        disabled={markers.length !== maxPoints || !apiKey || isPdfLoading}
                         className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors text-sm"
                     >
                         {isPdfLoading ? <><Spinner /> Generating…</> : 'Generate PDF Report'}
                     </button>
                     <button
                         onClick={handleGenerateA3Map}
-                        disabled={markers.length !== 6 || isA3Loading}
+                        disabled={markers.length !== maxPoints || isA3Loading}
                         className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-blue-400 font-medium rounded-lg transition-colors text-sm"
                     >
                         {isA3Loading ? <><Spinner /> Generating…</> : 'Generate A3 Map'}
@@ -731,6 +821,7 @@ export default function GoogleMaps() {
                                     <tr className="bg-slate-700 text-slate-300 text-xs uppercase">
                                         <th className="px-3 py-2 text-left font-medium">From</th>
                                         <th className="px-3 py-2 text-left font-medium">To</th>
+                                        <th className="px-3 py-2 text-right font-medium">Heading</th>
                                         <th className="px-3 py-2 text-right font-medium">km</th>
                                         <th className="px-3 py-2 text-right font-medium">Time</th>
                                         <th className="px-3 py-2 text-right font-medium">Cumul.</th>
@@ -745,10 +836,11 @@ export default function GoogleMaps() {
                                                 <tr key={index} className={index % 2 === 0 ? 'bg-slate-800' : 'bg-slate-800/60'}>
                                                     <td className="px-3 py-2 text-slate-300">{markers[index].name}</td>
                                                     <td className="px-3 py-2 text-slate-300">{markers[(index + 1) % markers.length].name}</td>
-                                                    <td className="px-3 py-2 text-right text-slate-300">{(dist / 1000).toFixed(2)}</td>
-                                                    <td className="px-3 py-2 text-right font-mono text-slate-300">{`${minutes}:${seconds.toString().padStart(2, '0')}`}</td>
-                                                    <td className="px-3 py-2 text-right font-mono text-amber-400">{formatTimeHMS(cumulativeTimes[index])}</td>
-                                                </tr>
+                                                <td className="px-3 py-2 text-right font-mono text-slate-300">{computeHeading(markers[index], markers[(index + 1) % markers.length], headingType)}</td>
+                                                <td className="px-3 py-2 text-right text-slate-300">{(dist / 1000).toFixed(2)}</td>
+                                                <td className="px-3 py-2 text-right font-mono text-slate-300">{`${minutes}:${seconds.toString().padStart(2, '0')}`}</td>
+                                                <td className="px-3 py-2 text-right font-mono text-amber-400">{formatTimeHMS(cumulativeTimes[index])}</td>
+                                            </tr>
                                             );
                                         });
                                     })()}
