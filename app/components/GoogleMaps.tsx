@@ -50,7 +50,7 @@ const calculateCumulativeTimes = (distances: number[], speed: number) => {
     });
 };
 
-const MAGNETIC_DECLINATION = 5.5; // degrees East, approximate for Romania (2026)
+const MAGNETIC_DECLINATION = 6; // degrees East, approximate for Romania (2026)
 
 const getSatellitePositions = (
     count: number,
