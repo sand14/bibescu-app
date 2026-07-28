@@ -513,6 +513,27 @@ export default function GoogleMaps() {
         }
     };
 
+    const handleGenerateCRS = () => {
+        if (markers.length !== maxPoints) return;
+        const sp = markers[0];
+        const lines: string[] = [];
+        lines.push(`${sp.lat},${sp.lng},0,250,SP`);
+        for (let i = 1; i < markers.length; i++) {
+            lines.push(`${markers[i].lat},${markers[i].lng},0,250,TP${i}`);
+        }
+        lines.push(`${sp.lat},${sp.lng},0,250,FP`);
+        const content = lines.join('\n');
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `route_${timestamp}.crs`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     // Add this helper function
     const fetchImageAsDataURL = async (url: string): Promise<string> => {
         const response = await fetch(url);
@@ -759,6 +780,13 @@ export default function GoogleMaps() {
                         className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-blue-400 font-medium rounded-lg transition-colors text-sm"
                     >
                         {isA3Loading ? <><Spinner /> Generating…</> : 'Generate A3 Map'}
+                    </button>
+                    <button
+                        onClick={handleGenerateCRS}
+                        disabled={markers.length !== maxPoints}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-green-400 font-medium rounded-lg transition-colors text-sm"
+                    >
+                        Generate CRS
                     </button>
                     <button
                         onClick={clearMarkers}
