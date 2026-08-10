@@ -57,6 +57,15 @@ const calculateCumulativeTimes = (distances: number[], speed: number) => {
     });
 };
 
+// Builds the pin content element used for AdvancedMarkerElement labels
+const createMarkerPinContent = (name: string): HTMLElement => {
+    const pin = new google.maps.marker.PinElement({
+        glyph: name,
+        glyphColor: 'black',
+    });
+    return pin.element;
+};
+
 const MAGNETIC_DECLINATION = 6; // degrees East, approximate for Romania (2026)
 
 const getSatellitePositions = (
@@ -100,7 +109,7 @@ export default function GoogleMaps() {
     const [speed, setSpeed] = useState<number>(120); // Default speed in km/h
     const polylineRef = useRef<google.maps.Polyline | null>(null);
     const polygonRef = useRef<google.maps.Polygon | null>(null);
-    const markersRef = useRef<google.maps.Marker[]>([]);
+    const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
 
     const getMarkerName = (index: number) => index === 0 ? 'SP/FP' : `T${index}`;
 
@@ -139,6 +148,7 @@ export default function GoogleMaps() {
             });
 
             const { Map } = await importLibrary('maps');
+            await importLibrary('marker'); // Required for AdvancedMarkerElement
 
             const locationInMap = {
                 lat: 45.657974,
@@ -189,15 +199,11 @@ export default function GoogleMaps() {
                         const updatedMarkers = [...prevMarkers, newMarker];
 
                         // Add new marker to the map with label
-                        const markerInstance = new google.maps.Marker({
+                        const markerInstance = new google.maps.marker.AdvancedMarkerElement({
                             position: newMarker,
                             map: mapInstance,
-                            draggable: true,
-                            label: {
-                                text: newMarker.name,
-                                color: 'black',
-                                fontWeight: 'bold',
-                            },
+                            gmpDraggable: true,
+                            content: createMarkerPinContent(newMarker.name),
                         });
 
                         markersRef.current = [...markersRef.current, markerInstance];
@@ -556,7 +562,7 @@ export default function GoogleMaps() {
     // Function to clear all markers
     const clearMarkers = () => {
         // Remove all markers from the map
-        markersRef.current.forEach(marker => marker.setMap(null));
+        markersRef.current.forEach(marker => { marker.map = null; });
         // Clear the markers from the state
         setMarkers([]);
         // Clear the markers reference
@@ -575,20 +581,16 @@ export default function GoogleMaps() {
     useEffect(() => {
         if (map) {
             // Remove old markers from the map
-            markersRef.current.forEach(marker => marker.setMap(null));
+            markersRef.current.forEach(marker => { marker.map = null; });
             markersRef.current = [];
 
             // Add new markers to the map
             markers.forEach((marker, index) => {
-                const markerInstance = new google.maps.Marker({
+                const markerInstance = new google.maps.marker.AdvancedMarkerElement({
                     position: marker,
                     map: map,
-                    draggable: true,
-                    label: {
-                        text: marker.name,
-                        color: 'black',
-                        fontWeight: 'bold',
-                    },
+                    gmpDraggable: true,
+                    content: createMarkerPinContent(marker.name),
                 });
                 markersRef.current.push(markerInstance);
 
