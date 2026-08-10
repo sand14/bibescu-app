@@ -60,9 +60,9 @@ const calculateCumulativeTimes = (distances: number[], speed: number) => {
 // Builds the pin content element used for AdvancedMarkerElement labels
 const createMarkerPinContent = (name: string): HTMLElement => {
     const pin = new google.maps.marker.PinElement({
-        glyph: name,
+        glyphText: name,
         glyphColor: 'black',
-    });
+    } as google.maps.marker.PinElementOptions);
     return pin.element;
 };
 
