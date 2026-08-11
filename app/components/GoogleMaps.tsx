@@ -529,12 +529,29 @@ export default function GoogleMaps() {
     const handleGenerateCRS = () => {
         if (markers.length !== maxPoints) return;
         const sp = markers[0];
-        const lines: string[] = [];
-        lines.push(`${sp.lat},${sp.lng},0,250,SP`);
+
+        // Build the ordered list of route points: SP, TP1..TPn, FP (=SP)
+        const points: { lat: number; lng: number; label: string }[] = [
+            { lat: sp.lat, lng: sp.lng, label: 'SP' },
+        ];
         for (let i = 1; i < markers.length; i++) {
-            lines.push(`${markers[i].lat},${markers[i].lng},0,250,TP${i}`);
+            points.push({ lat: markers[i].lat, lng: markers[i].lng, label: `TP${i}` });
         }
-        lines.push(`${sp.lat},${sp.lng},0,250,FP`);
+        points.push({ lat: sp.lat, lng: sp.lng, label: 'FP' });
+
+        const lines: string[] = [];
+        for (let i = 0; i < points.length; i++) {
+            const p = points[i];
+            lines.push(`${p.lat},${p.lng},0,250,${p.label}`);
+
+            if (i < points.length - 1) {
+                const next = points[i + 1];
+                const from = new google.maps.LatLng(p.lat, p.lng);
+                const to = new google.maps.LatLng(next.lat, next.lng);
+                const mid = google.maps.geometry.spherical.interpolate(from, to, 0.5);
+                lines.push(`${mid.lat()},${mid.lng()},0,250,H${i + 1}`);
+            }
+        }
         const content = lines.join('\n');
         const now = new Date();
         const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
