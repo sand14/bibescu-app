@@ -272,7 +272,7 @@ export default function GoogleMaps() {
         };
 
         // Auto-select zoom so tile grid fits within 8×8
-        let zoom = 7;
+        let zoom = 8;
         for (let z = 12; z >= 6; z--) {
             const cols = lon2tile(paddedMaxLng, z) - lon2tile(paddedMinLng, z) + 1;
             const rows = lat2tile(paddedMinLat, z) - lat2tile(paddedMaxLat, z) + 1;
