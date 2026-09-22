@@ -272,7 +272,7 @@ export default function GoogleMaps() {
         };
 
         // Auto-select zoom so tile grid fits within 8×8
-        let zoom = 6;
+        let zoom = 8;
         for (let z = 12; z >= 6; z--) {
             const cols = lon2tile(paddedMaxLng, z) - lon2tile(paddedMinLng, z) + 1;
             const rows = lat2tile(paddedMinLat, z) - lat2tile(paddedMaxLat, z) + 1;
@@ -336,7 +336,7 @@ export default function GoogleMaps() {
         for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].px, pts[i].py);
         ctx.lineTo(pts[0].px, pts[0].py);
         ctx.strokeStyle = '#FF3300';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2;
         ctx.lineJoin = 'round';
         ctx.stroke();
 
