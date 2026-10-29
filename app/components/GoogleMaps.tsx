@@ -414,15 +414,16 @@ export default function GoogleMaps() {
         return { dataUrl: canvas.toDataURL('image/png'), canvasWidth: canvas.width, canvasHeight: canvas.height };
     };
 
-    const saveReportToAccount = async (blob: Blob, filename: string, reportType: 'standard' | 'a3') => {
+    const saveReportToAccount = async (blob: Blob, filename: string, reportType: 'standard' | 'a3' | 'crs') => {
         if (!user) {
-            showToast('PDF downloaded! Log in to save reports to your account history.', 'info');
+            const extLabel = reportType === 'crs' ? 'CRS route' : 'PDF';
+            showToast(`${extLabel} downloaded! Log in to save files to your account history.`, 'info');
             return;
         }
         try {
             const formData = new FormData();
             formData.append('file', blob, filename);
-            formData.append('title', filename.replace('.pdf', ''));
+            formData.append('title', filename.replace(/\.(pdf|crs)$/i, ''));
             formData.append('reportType', reportType);
             const totalDist = distances.reduce((acc, d) => acc + d, 0);
             formData.append(
@@ -443,7 +444,8 @@ export default function GoogleMaps() {
 
             if (res.ok) {
                 triggerReportsRefresh();
-                showToast('Report saved to your account!', 'success');
+                const typeName = reportType === 'crs' ? 'CRS route' : 'Report';
+                showToast(`${typeName} saved to your account!`, 'success');
             } else {
                 console.warn('Failed to auto-archive report to server');
             }
@@ -603,13 +605,16 @@ export default function GoogleMaps() {
         const content = lines.join('\n');
         const now = new Date();
         const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+        const filename = `route_${timestamp}.crs`;
         const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `route_${timestamp}.crs`;
+        a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
+
+        saveReportToAccount(blob, filename, 'crs');
     };
 
     // Add this helper function
