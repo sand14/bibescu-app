@@ -6,7 +6,7 @@ import { useAuth } from '@/app/context/AuthContext';
 interface SavedReport {
   id: string;
   title: string;
-  reportType: 'standard' | 'a3';
+  reportType: 'standard' | 'a3' | 'crs';
   filename: string;
   fileSize: number;
   metadata: {
@@ -43,7 +43,7 @@ export default function ReportsModal() {
   const [reports, setReports] = useState<SavedReport[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'standard' | 'a3'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'standard' | 'a3' | 'crs'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -193,6 +193,15 @@ export default function ReportsModal() {
             >
               A3 Maps
             </button>
+            <button
+              type="button"
+              onClick={() => setFilterType('crs')}
+              className={`px-3 py-1 rounded-lg font-medium transition-colors ${
+                filterType === 'crs' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              CRS Files
+            </button>
           </div>
 
           <div className="relative flex-1 sm:max-w-xs">
@@ -239,7 +248,7 @@ export default function ReportsModal() {
               >
                 <div className="flex items-start gap-3 min-w-0">
                   <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-700/60 text-lg shrink-0">
-                    {report.reportType === 'a3' ? '🗺' : '📄'}
+                    {report.reportType === 'a3' ? '🗺' : report.reportType === 'crs' ? '🧭' : '📄'}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -250,10 +259,12 @@ export default function ReportsModal() {
                         className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                           report.reportType === 'a3'
                             ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                            : report.reportType === 'crs'
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                             : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                         }`}
                       >
-                        {report.reportType === 'a3' ? 'A3 Map' : 'A4 Report'}
+                        {report.reportType === 'a3' ? 'A3 Map' : report.reportType === 'crs' ? 'CRS Route' : 'A4 Report'}
                       </span>
                     </div>
 

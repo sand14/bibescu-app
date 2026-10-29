@@ -43,9 +43,12 @@ export async function GET(
 
   const disposition = download ? `attachment; filename="${report.filename}"` : `inline; filename="${report.filename}"`;
 
+  const isCrs = report.filename.toLowerCase().endsWith('.crs');
+  const contentType = isCrs ? 'text/plain; charset=utf-8' : 'application/pdf';
+
   return new NextResponse(fileBuffer, {
     headers: {
-      'Content-Type': 'application/pdf',
+      'Content-Type': contentType,
       'Content-Disposition': disposition,
       'Content-Length': fileBuffer.length.toString(),
       'Cache-Control': 'private, no-cache, no-store, must-revalidate',

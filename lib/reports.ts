@@ -14,7 +14,7 @@ export interface ReportItem {
   id: string;
   user_id: string;
   title: string;
-  report_type: 'standard' | 'a3';
+  report_type: 'standard' | 'a3' | 'crs';
   filename: string;
   file_path: string;
   file_size: number;

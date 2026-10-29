@@ -18,7 +18,7 @@ export async function GET() {
     id: string;
     user_id: string;
     title: string;
-    report_type: 'standard' | 'a3';
+    report_type: 'standard' | 'a3' | 'crs';
     filename: string;
     file_path: string;
     file_size: number;
@@ -65,8 +65,8 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const title = (formData.get('title') as string) || 'Flight Report';
-    const reportType = ((formData.get('reportType') as string) || 'standard') as 'standard' | 'a3';
+    const title = (formData.get('title') as string) || 'Flight File';
+    const reportType = ((formData.get('reportType') as string) || 'standard') as 'standard' | 'a3' | 'crs';
     const metadataStr = (formData.get('metadata') as string) || '{}';
 
     if (!file) {
@@ -75,7 +75,8 @@ export async function POST(request: Request) {
 
     const reportId = crypto.randomUUID();
     const timestamp = Date.now();
-    const safeBaseName = file.name ? path.basename(file.name).replace(/[^a-zA-Z0-9_.-]/g, '_') : `report_${timestamp}.pdf`;
+    const defaultExt = reportType === 'crs' ? 'crs' : 'pdf';
+    const safeBaseName = file.name ? path.basename(file.name).replace(/[^a-zA-Z0-9_.-]/g, '_') : `file_${timestamp}.${defaultExt}`;
     const storedFilename = `${timestamp}_${safeBaseName}`;
 
     const userDir = getUserReportsDir(user.id);
