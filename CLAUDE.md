@@ -15,31 +15,37 @@ No test suite exists in this project.
 
 ## Environment
 
-Requires `GOOGLE_MAPS_API_KEY` environment variable. The key is exposed to the client via `GET /api/config` rather than directly in the client bundle.
+- `GOOGLE_MAPS_API_KEY`: Required for Google Maps JS API and Static Maps satellite thumbnails. Exposed to the client via `GET /api/config`.
+- `DATA_DIR`: Optional path to data storage directory (defaults to `./data` in dev, `/app/data` in Docker). Stores SQLite database (`bibescu.db`) and user PDF reports (`reports/<userId>/`).
 
 ## Architecture
 
-Single-page Next.js 16 (App Router) app with one primary client component and two API routes.
+Next.js 16 (App Router) with client components and backend route handlers.
 
-**`app/components/GoogleMaps.tsx`** — the entire application UI lives here (~700 lines). It is a `"use client"` component that:
-- Loads the Google Maps JS API dynamically via `@googlemaps/js-api-loader`
-- Manages all state with React `useState`/`useRef` (no external state library)
-- Allows placing up to 6 markers (SP/FP + T1–T5); on the 6th marker the route closes back to start
-- Calculates distances using `google.maps.geometry.spherical.computeDistanceBetween`
-- Exports PDF reports via `jspdf` + `jspdf-autotable`, fetching satellite images from Google Static Maps API and OSM tiles from the local tile proxy
+### Frontend
+- **`app/components/GoogleMaps.tsx`** — primary flight planning UI:
+  - Dynamically loads Google Maps JS API via `@googlemaps/js-api-loader`
+  - Marker placement (SP/FP + T1–T5) and polygon area restriction
+  - Spherical geometry calculations (distances, headings, cumulative flight times)
+  - Exports PDF reports (`jspdf` + `jspdf-autotable`) and auto-archives them to the user's account when logged in
+  - Exports `.crs` route files
+- **`app/context/AuthContext.tsx`** — React context for authentication state (`user`, `login`, `register`, `logout`) and modal visibility (`AuthModal`, `ReportsModal`, `Toast`).
+- **`app/components/NavbarAuth.tsx`** — Top bar navigation controls (Login/Register or User chip + "My Reports" + Logout).
+- **`app/components/AuthModal.tsx`** — Modal dialog for signing in or registering a local account.
+- **`app/components/ReportsModal.tsx`** — Modal dialog for browsing, previewing, downloading, or deleting saved PDF reports.
+- **`app/components/Toast.tsx`** — Notification feedback banner for downloads, saves, and logins.
 
-**`app/api/config/route.ts`** — returns `{ googleMapsApiKey }` from `process.env.GOOGLE_MAPS_API_KEY`.
-
-**`app/api/tile/route.ts`** — proxies OpenStreetMap tile requests (`/api/tile?z=&x=&y=`) to avoid CORS issues, with 1-hour server-side cache headers.
-
-## PDF Export
-
-Two export modes:
-- **Standard Report (A4)**: 6 satellite thumbnails (one per marker) + data table + OSM overview map
-- **A3 Map**: Single full-page OSM route map for printing
-
-OSM map generation (`generateOSMMapImage`) builds a canvas by fetching tiles through `/api/tile`, then draws the polyline, marker labels, and a scale bar on top.
+### Backend & Storage
+- **`lib/db.ts`** — Local SQLite database initialized using Node.js built-in `node:sqlite` (`DatabaseSync`). WAL mode enabled.
+  - Tables: `users`, `sessions`, `reports`.
+- **`lib/auth.ts`** — Password hashing with `crypto.scryptSync` + random salt, session generation, timing-safe verification, and HTTP-only cookie management (`bibescu_auth_token`).
+- **`lib/reports.ts`** — Helpers for managing the user reports directory on disk.
+- **`app/api/auth/*`** — Authentication routes (`/register`, `/login`, `/logout`, `/me`).
+- **`app/api/reports/*`** — User-isolated report upload, listing, downloading, and deletion.
+- **`app/api/config/route.ts`** — Returns `{ googleMapsApiKey }` from `process.env.GOOGLE_MAPS_API_KEY`.
+- **`app/api/tile/route.ts`** — Proxies OpenStreetMap tile requests (`/api/tile?z=&x=&y=`) to avoid CORS issues.
 
 ## Deployment
 
-Docker image published to `sand14/bibescu-app` (Linux ARM64) via GitHub Actions on release. `next.config.js` sets `output: "standalone"` for the container build.
+Docker image published to `sand14/bibescu-app` (Linux ARM64) via GitHub Actions on release.
+`next.config.js` sets `output: "standalone"`. Mount `/app/data` to persist user accounts and PDF reports across container updates.

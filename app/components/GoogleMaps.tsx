@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useAuth } from '@/app/context/AuthContext';
 
 const Spinner = () => (
     <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -101,6 +102,7 @@ const computeHeading = (
 };
 
 export default function GoogleMaps() {
+    const { user, showToast, triggerReportsRefresh } = useAuth();
     const mapRef = useRef<HTMLDivElement>(null);
     const [markers, setMarkers] = useState<Array<{ lat: number, lng: number, name: string }>>([]);
     const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -412,6 +414,44 @@ export default function GoogleMaps() {
         return { dataUrl: canvas.toDataURL('image/png'), canvasWidth: canvas.width, canvasHeight: canvas.height };
     };
 
+    const saveReportToAccount = async (blob: Blob, filename: string, reportType: 'standard' | 'a3') => {
+        if (!user) {
+            showToast('PDF downloaded! Log in to save reports to your account history.', 'info');
+            return;
+        }
+        try {
+            const formData = new FormData();
+            formData.append('file', blob, filename);
+            formData.append('title', filename.replace('.pdf', ''));
+            formData.append('reportType', reportType);
+            const totalDist = distances.reduce((acc, d) => acc + d, 0);
+            formData.append(
+                'metadata',
+                JSON.stringify({
+                    pointsCount: markers.length,
+                    totalDistanceKm: (totalDist / 1000).toFixed(2),
+                    speedKmH: speed,
+                    headingType,
+                    waypoints: markers.map((m) => ({ name: m.name, lat: m.lat, lng: m.lng })),
+                })
+            );
+
+            const res = await fetch('/api/reports', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (res.ok) {
+                triggerReportsRefresh();
+                showToast('Report saved to your account!', 'success');
+            } else {
+                console.warn('Failed to auto-archive report to server');
+            }
+        } catch (err) {
+            console.error('Error auto-archiving report:', err);
+        }
+    };
+
     const handleGenerateA3Map = async () => {
         if (markers.length !== maxPoints) return;
         setIsA3Loading(true);
@@ -432,7 +472,11 @@ export default function GoogleMaps() {
 
         const now = new Date();
         const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
-        doc.save(`a3-map_${timestamp}.pdf`);
+        const filename = `a3-map_${timestamp}.pdf`;
+        doc.save(filename);
+
+        const pdfBlob = doc.output('blob');
+        await saveReportToAccount(pdfBlob, filename, 'a3');
         } finally {
             setIsA3Loading(false);
         }
@@ -520,7 +564,11 @@ export default function GoogleMaps() {
 
         const now = new Date();
         const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
-        doc.save(`journey-report_${timestamp}.pdf`);
+        const filename = `journey-report_${timestamp}.pdf`;
+        doc.save(filename);
+
+        const pdfBlob = doc.output('blob');
+        await saveReportToAccount(pdfBlob, filename, 'standard');
         } finally {
             setIsPdfLoading(false);
         }
