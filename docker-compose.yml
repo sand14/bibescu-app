@@ -1,0 +1,13 @@
+services:
+  bibescu-app:
+    build: .
+    image: sand14/bibescu-app:latest
+    container_name: bibescu-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - DATA_DIR=/app/data
+    volumes:
+      - ./data:/app/data
