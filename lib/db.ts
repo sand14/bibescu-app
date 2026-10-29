@@ -40,6 +40,13 @@ function initSchema(database: DatabaseSync) {
     CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_reports_user_id ON reports(user_id);
   `);
+
+  // Immediately flush table schemas into the primary .db file
+  try {
+    database.exec('PRAGMA wal_checkpoint(TRUNCATE);');
+  } catch {
+    // Ignore if locked by concurrent reader
+  }
 }
 
 export function getDb(): DatabaseSync {
@@ -51,6 +58,7 @@ export function getDb(): DatabaseSync {
     _db = new DatabaseSync(dbPath);
     _db.exec('PRAGMA busy_timeout = 10000;');
     _db.exec('PRAGMA journal_mode = WAL;');
+    _db.exec('PRAGMA wal_autocheckpoint = 1;');
     _db.exec('PRAGMA foreign_keys = ON;');
   }
 
@@ -60,6 +68,15 @@ export function getDb(): DatabaseSync {
   }
 
   return _db;
+}
+
+export function checkpointDb() {
+  try {
+    const database = getDb();
+    database.exec('PRAGMA wal_checkpoint(PASSIVE);');
+  } catch {
+    // Ignore checkpoint errors
+  }
 }
 
 // Lazy Proxy: Ensures DB is never opened during `next build` static analysis,

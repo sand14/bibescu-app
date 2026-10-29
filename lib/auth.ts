@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { cookies } from 'next/headers';
-import db from '@/lib/db';
+import db, { checkpointDb } from '@/lib/db';
 
 const SESSION_COOKIE_NAME = 'bibescu_auth_token';
 const SESSION_MAX_AGE_DAYS = 30;
@@ -37,6 +37,7 @@ export function createSession(userId: string): { token: string; expiresAt: numbe
     INSERT INTO sessions (token, user_id, expires_at)
     VALUES (?, ?, ?)
   `).run(token, userId, expiresAt);
+  checkpointDb();
 
   return { token, expiresAt };
 }
@@ -71,6 +72,7 @@ export function getSessionUser(token: string): SafeUser | null {
 export function deleteSession(token: string): void {
   if (!token) return;
   db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
+  checkpointDb();
 }
 
 export async function getCurrentUser(): Promise<SafeUser | null> {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import db from '@/lib/db';
+import db, { checkpointDb } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -92,6 +92,7 @@ export async function DELETE(
 
   // Delete from database
   db.prepare('DELETE FROM reports WHERE id = ? AND user_id = ?').run(id, user.id);
+  checkpointDb();
 
   return NextResponse.json({ ok: true });
 }
