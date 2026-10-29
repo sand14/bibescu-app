@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import db from '@/lib/db';
+import db, { checkpointDb } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { getUserReportsDir } from '@/lib/reports';
 
@@ -99,6 +99,7 @@ export async function POST(request: Request) {
       metadataStr,
       timestamp
     );
+    checkpointDb();
 
     let parsedMeta = null;
     try {

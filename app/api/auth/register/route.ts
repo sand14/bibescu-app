@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
-import db from '@/lib/db';
+import db, { checkpointDb } from '@/lib/db';
 import { hashPassword, createSession, setSessionCookie } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -59,6 +59,7 @@ export async function POST(request: Request) {
 
     const { token, expiresAt } = createSession(userId);
     await setSessionCookie(token, expiresAt);
+    checkpointDb();
 
     return NextResponse.json({
       user: {
